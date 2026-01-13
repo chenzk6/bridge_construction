@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- LR4_R560 kinematic body -->
+
+<KinBody name="LR4_R560">
+
+  <Body name="robot_base" type="dynamic">
+    <translation>0 0 0</translation>
+    <rotationaxis>1 0 0 0</rotationaxis>
+    <Geom type="box">
+      <translation>0 0 0</translation>
+      <Extents>0.05 0.05 0.05</Extents>
+      <diffusecolor>0.5 0.5 0.5</diffusecolor>
+    </Geom>
+  </Body>
+
+  <Body name="LR4_R560_link2_respondable" type="dynamic">
+    <offsetfrom>robot_base</offsetfrom>
+    <translation>-0.05145 -0.00004 0.20057</translation>
+    <rotationaxis>0 1 0 180</rotationaxis>
+    <Geom type="box">
+      <translation>0 0 0</translation>
+      <Extents>0.03 0.03 0.05</Extents>
+      <diffusecolor>1.0 0.6 0.2</diffusecolor>
+    </Geom>
+  </Body>
+
+  <Joint name="LR4_R560_joint1" type="hinge">
+    <Body>robot_base</Body>
+    <Body>LR4_R560_link2_respondable</Body>
+    <offsetfrom>robot_base</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-170 170</limitsdeg>
+    <maxvel>7.255</maxvel>
+    <weight>1</weight>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="LR4_R560_link3_respondable" type="dynamic">
+    <offsetfrom>LR4_R560_link2_respondable</offsetfrom>
+    <translation>-0.02000 -0.00000 0.14450</translation>
+    <rotationaxis>1 0 0 -90</rotationaxis>
+    <Geom type="box">
+      <translation>0 0 0</translation>
+      <Extents>0.03 0.10 0.03</Extents>
+      <diffusecolor>1.0 0.6 0.2</diffusecolor>
+    </Geom>
+  </Body>
+
+  <Joint name="LR4_R560_joint2" type="hinge">
+    <Body>LR4_R560_link2_respondable</Body>
+    <Body>LR4_R560_link3_respondable</Body>
+    <offsetfrom>LR4_R560_link2_respondable</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-143 87</limitsdeg>
+    <maxvel>7.255</maxvel>
+    <weight>1</weight>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="LR4_R560_link4_respondable" type="dynamic">
+    <offsetfrom>LR4_R560_link3_respondable</offsetfrom>
+    <translation>0.00000 0.26000 0.00000</translation>
+    <rotationaxis>0 1 0 180</rotationaxis>
+    <Geom type="box">
+      <translation>0 0 0</translation>
+      <Extents>0.03 0.03 0.03</Extents>
+      <diffusecolor>1.0 0.6 0.2</diffusecolor>
+    </Geom>
+  </Body>
+
+  <Joint name="LR4_R560_joint3" type="hinge">
+    <Body>LR4_R560_link3_respondable</Body>
+    <Body>LR4_R560_link4_respondable</Body>
+    <offsetfrom>LR4_R560_link3_respondable</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-205 53</limitsdeg>
+    <maxvel>8.062</maxvel>
+    <weight>1</weight>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="LR4_R560_link5_respondable" type="dynamic">
+    <offsetfrom>LR4_R560_link4_respondable</offsetfrom>
+    <translation>0.09018 -0.01915 0.00000</translation>
+    <rotationaxis>1 0 0 -90</rotationaxis>
+    <Geom type="box">
+      <translation>0 0 0</translation>
+      <Extents>0.03 0.03 0.08</Extents>
+      <diffusecolor>1.0 0.6 0.2</diffusecolor>
+    </Geom>
+  </Body>
+
+  <Joint name="LR4_R560_joint4" type="hinge">
+    <Body>LR4_R560_link4_respondable</Body>
+    <Body>LR4_R560_link5_respondable</Body>
+    <offsetfrom>LR4_R560_link4_respondable</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-200 200</limitsdeg>
+    <maxvel>8.727</maxvel>
+    <weight>1</weight>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="LR4_R560_link6_respondable" type="dynamic">
+    <offsetfrom>LR4_R560_link5_respondable</offsetfrom>
+    <translation>0.00000 0.00000 0.19000</translation>
+    <rotationaxis>1 0 0 -90</rotationaxis>
+    <Geom type="box">
+      <translation>0 0 0</translation>
+      <Extents>0.03 0.03 0.03</Extents>
+      <diffusecolor>1.0 0.6 0.2</diffusecolor>
+    </Geom>
+  </Body>
+
+  <Joint name="LR4_R560_joint5" type="hinge">
+    <Body>LR4_R560_link5_respondable</Body>
+    <Body>LR4_R560_link6_respondable</Body>
+    <offsetfrom>LR4_R560_link5_respondable</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-125 125</limitsdeg>
+    <maxvel>9.774</maxvel>
+    <weight>1</weight>
+    <resolution>1</resolution>
+  </Joint>
+
+  <Body name="LR4_R560_link7_respondable" type="dynamic">
+    <offsetfrom>LR4_R560_link6_respondable</offsetfrom>
+    <translation>-0.06700 0.00063 -0.00000</translation>
+    <rotationaxis>1 0 0 90</rotationaxis>
+    <Geom type="box">
+      <translation>0 0 0</translation>
+      <Extents>0.02 0.02 0.02</Extents>
+      <diffusecolor>0.8 0.8 0.8</diffusecolor>
+    </Geom>
+  </Body>
+
+  <Joint name="LR4_R560_joint6" type="hinge">
+    <Body>LR4_R560_link6_respondable</Body>
+    <Body>LR4_R560_link7_respondable</Body>
+    <offsetfrom>LR4_R560_link6_respondable</offsetfrom>
+    <axis>0 0 1</axis>
+    <limitsdeg>-360 360</limitsdeg>
+    <maxvel>12.915</maxvel>
+    <weight>1</weight>
+    <resolution>1</resolution>
+  </Joint>
+
+  <!-- End Effector (optional, typically used as reference) -->
+  <Body name="link_eef_visual" type="dynamic">
+    <offsetfrom>LR4_R560_link7_respondable</offsetfrom>
+    <translation>-0.00015 0.00013 0.00526</translation>
+    <rotationaxis>0 1 0 180</rotationaxis>
+    <Geom type="sphere">
+      <translation>0 0 0</translation>
+      <radius>0.005</radius>
+      <diffusecolor>1.0 0.0 0.0</diffusecolor>
+    </Geom>
+  </Body>
+
+</KinBody>
