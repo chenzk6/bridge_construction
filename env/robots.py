@@ -7,6 +7,7 @@ from env.bullet_rotations import quat2euler, quat_mul, euler2quat, quat2mat, is_
 KINOVA_MODEL_DIR = os.path.join(os.path.dirname(__file__), 'kinova_description', 'urdf')
 UR_MODEL_DIR = os.path.join(os.path.dirname(__file__), 'ur_description', 'urdf')
 XARM_MODEL_DIR = os.path.join(os.path.dirname(__file__), 'xarm_description', 'urdf')
+LH_MODEL_DIR = os.path.join(os.path.dirname(__file__), 'linghou_description', 'urdf')
 
 
 class ArmRobot(object):
@@ -74,12 +75,19 @@ class ArmRobot(object):
         target_endpos = np.asarray(self.endEffectorPos) # + np.concatenate([np.random.uniform(-0.15, 0.15, size=2), [0.]])
         # print('target endpos', target_endpos)
         jointPoses = self.run_ik(target_endpos, endEffectorOrn)[0]
+        print(f"IK 求解结果长度: {len(jointPoses)}")
         if len(np.array(jointPoses).shape) > 1:
             jointPoses = jointPoses[np.argmin([np.linalg.norm(pos - np.array(self.init_qpos)[self.motorIndices[:self.ndof]]) for pos in jointPoses])]
         jointPoses = np.concatenate([jointPoses[:self.ndof], self.reset_finger_joints])
         for i in range(len(self.motorIndices)):
             self.p.resetJointState(self._robot, self.motorIndices[i], jointPoses[i])
         self.p.stepSimulation()
+
+        actual_pos = self.get_end_effector_pos()  
+        target_pos = np.asarray(self.endEffectorPos)  
+        print(f"目标位置: {target_pos}")  
+        print(f"实际位置: {actual_pos}")  
+        print(f"位置误差: {np.linalg.norm(actual_pos - target_pos)}")
         # print('after reset, endpos', self.get_end_effector_pos(), self.get_end_effector_orn(as_type="quat"), jointPoses)
         # for i in range(self.num_joints):
         #     print(i, self.p.getLinkState(self._robot, i))
@@ -154,32 +162,7 @@ class ArmRobot(object):
             for i in range(len(self.motorIndices)):
                 self.p.resetJointState(self._robot, self.motorIndices[i], joint_poses[i])
             self.p.stepSimulation()
-        # print("IK counter", counter)
-        # width = 500
-        # height = 500
-        # view_matrix = self.p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[1.3, 0.6, 0.05],
-        #                                                        distance=1.5,
-        #                                                        yaw=-30,
-        #                                                        pitch=-20,
-        #                                                        roll=0,
-        #                                                        upAxisIndex=2)
-        # proj_matrix = self.p.computeProjectionMatrixFOV(fov=60,
-        #                                                 aspect=1.0,
-        #                                                 nearVal=0.1,
-        #                                                 farVal=100.0)
-        # (_, _, px, _, _) = self.p.getCameraImage(width=width,
-        #                                          height=height,
-        #                                          viewMatrix=view_matrix,
-        #                                          projectionMatrix=proj_matrix,
-        #                                          # renderer=p.ER_BULLET_HARDWARE_OPENGL,
-        #                                          )
-        # rgb_array = np.array(px, dtype=np.uint8)
-        # rgb_array = np.reshape(rgb_array, (width, height, 4))
-        #
-        # rgb_array = rgb_array[:, :, :3]
-        # import matplotlib.pyplot as plt
-        # plt.imshow(rgb_array)
-        # plt.show()
+
         cur_pos = np.array(self.get_end_effector_pos())
         pos_error = np.linalg.norm(cur_pos - np.array(pos))
         orn_diff = self.p.getDifferenceQuaternion(self.get_end_effector_orn(as_type="quat"), np.array(orn))
@@ -535,24 +518,6 @@ class UR2f85Robot(ArmRobot):
         n_solutions = len(joint_pose) // 6
         n = 0
 
-        # def gen_random_rot():
-        #     alpha = np.random.uniform(-np.pi, np.pi)
-        #     beta = np.random.uniform(-np.pi, np.pi)
-        #     theta = np.random.uniform(-0.03, 0.03)
-        #     return quat2mat(np.array([np.sin(theta / 2) * np.cos(alpha) * np.cos(beta),
-        #                               np.sin(theta / 2) * np.cos(alpha) * np.sin(beta),
-        #                               np.sin(theta / 2) * np.sin(alpha), np.cos(theta / 2)]))
-        #
-        # while n_solutions == 0 and n < 100:
-        #     ik_pos = rot @ delta_pos
-        #     ik_pos[:2] += np.random.uniform(-0.005, 0.005, size=(2, 1))
-        #     ik_mat = rot @ quat2mat(orn)
-        #     ik_mat = gen_random_rot() @ ik_mat
-        #     ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
-        #     joint_pose = self.ur5_kin.inverse(ee_pose.reshape(-1).tolist())
-        #     joint_pose = self.fit_circular(joint_pose)
-        #     n_solutions = len(joint_pose) // 6
-        #     n += 1
         joint_pose = np.reshape(joint_pose, (n_solutions, 6))
         info = {'is_success': n_solutions > 0}
         return joint_pose, info
@@ -560,7 +525,7 @@ class UR2f85Robot(ArmRobot):
 
 class XArm7Robot(ArmRobot):
     def __init__(self, physics_client, urdfrootpath=XARM_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(1.0, 0.3, 0.6),
+                 init_end_effector_pos=(1.0, 0.5, 0.6),#(1.0, 0.3, 0.6)
                  useOrientation=True, useNullSpace=True):
         if init_qpos is None:
             # init_qpos = [0, 0.0, 0.0786759, 0.0, 1.54692674, 0.0, 1.46825087, 0.,
@@ -608,19 +573,130 @@ class XArm7Robot(ArmRobot):
         joint_poses = self.kin_free4.inverse(ee_pose.reshape(-1)) + self.kin_free0.inverse(ee_pose.reshape(-1))
         n_solutions = len(joint_poses) // self.kin_free4.getDOF()
         joint_poses = np.array(joint_poses).reshape(n_solutions, self.kin_free4.getDOF()).tolist()
-        # if n_solutions == 0:
-        #     iterative_ik_joint_poses = self.p.calculateInverseKinematics(
-        #         self._robot, self.end_effector_index, pos, orn, maxNumIterations=100)[:self.ndof]
-        #     debug_forward_pos = np.array(self.kin.forward(iterative_ik_joint_poses)).reshape(3, 4)[:, -1]
-        #     if np.linalg.norm(debug_forward_pos - pos) < 1e-3:
-        #         joint_poses = [iterative_ik_joint_poses]
-        #         n_solutions += 1
-        # Filter out or adjust joint out of range
         if n_solutions > 0:
             joint_poses = list(filter(lambda conf: np.all(conf > np.array(self.joint_ll) - 1e-3) and
                                                    np.all(conf < np.array(self.joint_ul) + 1e-3), joint_poses))
             n_solutions = len(joint_poses)
         return np.array(joint_poses), {'is_success': n_solutions > 0}
+from scipy.spatial.transform import Rotation as R
+
+class LHRobot(ArmRobot):
+    def _verify_fk(self):
+        """验证 IKFast 的正向运动学"""
+        
+        # 测试零位
+        zero_joints = [0., 0., 0., 0., 0., 0.]
+        fk_result = self.lh_kin.forward(zero_joints)
+        fk_matrix = np.reshape(fk_result, [3, 4])
+        
+        ikfast_pos = fk_matrix[:, 3]  # IKFast 的零位末端位置
+        
+        # PyBullet 的零位末端位置
+        self.p.resetJointStatesMultiDof(self._robot, range(6), [[0.]]*6)
+        pybullet_state = self.p.getLinkState(self._robot, self.end_effector_index)
+        pybullet_pos = np.array(pybullet_state[0]) - self.base_pos
+        
+        print("="*50)
+        print("正向运动学对比（零位）：")
+        print(f"IKFast  位置: {ikfast_pos}")
+        print(f"PyBullet位置: {pybullet_pos}")
+        print(f"差异向量: {ikfast_pos - pybullet_pos}")
+        print(f"差异范数: {np.linalg.norm(ikfast_pos - pybullet_pos):.6f}m")
+        print("="*50)
+        
+        return ikfast_pos, pybullet_pos
+    def __init__(self, physics_client, urdfrootpath=LH_MODEL_DIR, init_qpos=None,
+                 init_end_effector_pos=(1.0, 0.6, 0.4),
+                 useOrientation=True, useNullSpace=True):
+        
+        if init_qpos is None:
+            init_qpos = [0, 0, 0, 0, 0, 0, 0, 0, 0,
+                         0, 0, 0, 0, 0, 0]
+        
+        end_effector_index = 7
+        reset_finger_joints = [0.] * 6
+
+        # 导入 IKFast 求解器
+        import env.ikfastpy.LH_ikFast as LH_ikFast
+        self.lh_kin = LH_ikFast.PyKinematics()
+
+        # 计算初始夹爪姿态（简化版本）
+        init_gripper_quat = mat2quat(
+            np.reshape(self.lh_kin.forward([0., 0., 0., 0., 0., 0.]), [3, 4])[:, :3]
+        )
+        
+        # 计算朝下姿态（与其他机器人保持一致）
+        topdown_quat = quat_mul(np.array([0., 0., np.sin(np.pi / 4), np.cos(np.pi / 4)]), 
+                               init_gripper_quat)
+        # topdown_quat = quat_mul(np.array([np.sin(-np.pi / 4), 0., 0., np.cos(-np.pi / 4)]),   
+        #                init_gripper_quat)
+        init_gripper_euler = quat2euler(topdown_quat)
+
+        base_orn = [0., 0., 1., 0.]  # 四元数表示绕Z轴180度旋转
+        
+        super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,  
+                                          [0.7, 0.6, 0.0], base_orn, init_end_effector_pos,  
+                                          init_gripper_euler, end_effector_index, reset_finger_joints,  
+                                          useOrientation, useNullSpace)  
+        self.collision_pairs = set()
+        self._verify_fk()
+
+    def _post_gripper(self):
+        # 设置夹爪关节索引
+        self.gripper_joint_inds = [8, 9, 10, 11, 12, 13]
+        self.gripper_multipliers = [1, 1, 1, 1, 1, 1]
+        self.motorIndices.extend(self.gripper_joint_inds)
+
+    def get_observation(self):  
+        end_effector_state = self.p.getLinkState(self._robot, self.end_effector_index, computeLinkVelocity=1)  
+        end_effector_pos, end_effector_orn, _, _, _, _, end_effector_vl, end_effector_va = end_effector_state  
+        end_effector_orn = self.p.getEulerFromQuaternion(end_effector_orn)  
+        gripper_states = self.p.getJointStates(self._robot, self.gripper_joint_inds)  
+        gripper_pos, gripper_vel, *_ = zip(*gripper_states)  
+        return np.array(end_effector_pos), np.array(end_effector_orn), np.array(end_effector_vl), np.array(gripper_pos), np.array(gripper_vel)  
+  
+    def gen_gripper_joint_command(self, ctrl):
+        """与 xArm 相同的夹爪控制逻辑"""
+        return 0.3 * ctrl * np.array(self.gripper_multipliers)
+  
+    def run_ik(self, pos, orn):
+        """使用 IKFast 求解器"""
+        # # 坐标变换（参考 UR2f85Robot 实现）
+        # ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
+        # ik_mat = quat2mat(orn)
+        # ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
+
+        # 获取基座旋转矩阵  
+        base_rot_mat = quat2mat([0., 0., 1., 0.])
+        # 坐标变换（包含旋转）  
+        ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
+        ik_pos = base_rot_mat.T @ ik_pos  # 添加基座旋转的逆变换
+        ik_mat = quat2mat(orn)
+        ik_mat = base_rot_mat.T @ ik_mat  # 姿态也需要变换
+        ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
+
+        # 调试输出
+        print(f"[DEBUG] 目标位置: {pos}")
+        print(f"[DEBUG] 相对位置: {ik_pos.T}")
+        print(f"[DEBUG] 旋转矩阵:\n{ik_mat}")
+        print(f"[DEBUG] ee_pose: {ee_pose.reshape(-1)}")
+        
+        # 调用 IKFast 求解
+        joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
+        print(f"[DEBUG] IK 返回长度: {len(joint_pose)}")
+          
+        # 处理多个解
+        n_solutions = len(joint_pose) // 6
+        joint_pose = np.reshape(joint_pose, (n_solutions, 6))
+          
+        # 过滤超出关节限制的解
+        valid_solutions = []
+        for solution in joint_pose:
+            if np.all(solution > np.array(self.joint_ll) - 1e-3) and \
+               np.all(solution < np.array(self.joint_ul) + 1e-3):
+                valid_solutions.append(solution)
+        
+        return np.array(valid_solutions), {'is_success': len(valid_solutions) > 0}
 
 
 if __name__ == "__main__":
