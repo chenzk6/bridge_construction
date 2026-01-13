@@ -4,3 +4,12 @@
 __pycache__
 *.mp4
 trained_models/
+logs/lh_train/*.csv
+logs/pre_train/*.csv
+logs/lh_train/*.pt
+tmp/
+logs/lh_train/log.txt
+logs/pre_train/*.pt
+low_level_paths.pkl
+logs/pre_train/log.txt
+test*.py
