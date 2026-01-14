@@ -582,19 +582,6 @@ from scipy.spatial.transform import Rotation as R
 
 class LHRobot(ArmRobot):
     def _verify_fk(self):
-        """验证 IKFast 的正向运动学（含坐标系转换）"""
-        self.p.resetJointStatesMultiDof(self._robot, range(6), [[0.]]*6)
-        pb_state = self.p.getLinkState(self._robot, self.end_effector_index)
-        pb_quat = pb_state[1]
-        R_zero = quat2mat(pb_quat)
-
-        print("="*60)
-        print("零位时末端坐标系的三个轴（世界坐标）：")
-        print(f"X 轴: {R_zero[:, 0]}")
-        print(f"Y 轴: {R_zero[:, 1]}")
-        print(f"Z 轴: {R_zero[:, 2]}")
-        print("="*60)
-
         zero_joints = [0., 0., 0., 0., 0., 0.]
         
         # IKFast FK
@@ -634,7 +621,7 @@ class LHRobot(ArmRobot):
         
         return p_ik, pb_pos_in_base
     def __init__(self, physics_client, urdfrootpath=LH_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(1.2, 0.8, 0.4),
+                 init_end_effector_pos=(1.2, 0.6, 0.3),
                  useOrientation=True, useNullSpace=True):
         
         if init_qpos is None:
@@ -668,18 +655,17 @@ class LHRobot(ArmRobot):
         #     np.reshape(self.lh_kin.forward([0., 0., 0., 0., 0., 0.]), [3, 4])[:, :3]
         # )
         
-        topdown_quat = quat_mul(np.array([0, np.sin(-np.pi / 4), 0., np.cos(-np.pi / 4)]),   
+        topdown_quat = quat_mul(np.array([0, np.sin(-np.pi / 4), 0., np.cos(-np.pi / 4)]), 
                        init_gripper_quat)
         init_gripper_euler = quat2euler(topdown_quat)
 
         self.base_orn = [0., 0., 1., 0.]  # 四元数表示绕Z轴180度旋转
-        
-        super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,  
-                                          [0.7, 0.6, 0.0], self.base_orn, init_end_effector_pos,  
-                                          init_gripper_euler, end_effector_index, reset_finger_joints,  
+        super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,
+                                          [0.7, 0.6, 0.0], self.base_orn, init_end_effector_pos,
+                                          init_gripper_euler, end_effector_index, reset_finger_joints,
                                           useOrientation, useNullSpace)
         self.collision_pairs = set()
-        self._verify_fk()
+        # self._verify_fk()
 
     def _post_gripper(self):
         # 设置夹爪关节索引
