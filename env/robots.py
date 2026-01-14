@@ -582,31 +582,59 @@ from scipy.spatial.transform import Rotation as R
 
 class LHRobot(ArmRobot):
     def _verify_fk(self):
-        """验证 IKFast 的正向运动学"""
-        
-        # 测试零位
+        """验证 IKFast 的正向运动学（含坐标系转换）"""
+        self.p.resetJointStatesMultiDof(self._robot, range(6), [[0.]]*6)
+        pb_state = self.p.getLinkState(self._robot, self.end_effector_index)
+        pb_quat = pb_state[1]
+        R_zero = quat2mat(pb_quat)
+
+        print("="*60)
+        print("零位时末端坐标系的三个轴（世界坐标）：")
+        print(f"X 轴: {R_zero[:, 0]}")
+        print(f"Y 轴: {R_zero[:, 1]}")
+        print(f"Z 轴: {R_zero[:, 2]}")
+        print("="*60)
+
         zero_joints = [0., 0., 0., 0., 0., 0.]
+        
+        # IKFast FK
         fk_result = self.lh_kin.forward(zero_joints)
         fk_matrix = np.reshape(fk_result, [3, 4])
+        R_ik = fk_matrix[:, :3]
+        p_ik = fk_matrix[:, 3]
         
-        ikfast_pos = fk_matrix[:, 3]  # IKFast 的零位末端位置
+        # 转换到 PyBullet 坐标系
+        R_ik_in_pb = R_ik @ self.C_ik2pb
         
-        # PyBullet 的零位末端位置
+        # PyBullet FK
         self.p.resetJointStatesMultiDof(self._robot, range(6), [[0.]]*6)
-        pybullet_state = self.p.getLinkState(self._robot, self.end_effector_index)
-        pybullet_pos = np.array(pybullet_state[0]) - self.base_pos
+        pb_state = self.p.getLinkState(self._robot, self.end_effector_index)
+        pb_quat = pb_state[1]
+        pb_pos_world = np.array(pb_state[0])
+        pb_rot = quat2mat(pb_quat)
         
-        print("="*50)
-        print("正向运动学对比（零位）：")
-        print(f"IKFast  位置: {ikfast_pos}")
-        print(f"PyBullet位置: {pybullet_pos}")
-        print(f"差异向量: {ikfast_pos - pybullet_pos}")
-        print(f"差异范数: {np.linalg.norm(ikfast_pos - pybullet_pos):.6f}m")
-        print("="*50)
+        # 转换到 base 坐标系
+        R_w_b = quat2mat(self.base_orn)
+        p_w_b = np.array(self.base_pos)
+        pb_rot_in_base = R_w_b.T @ pb_rot
+        pb_pos_in_base = R_w_b.T @ (pb_pos_world - p_w_b)
         
-        return ikfast_pos, pybullet_pos
+        # 对比
+        print("="*60)
+        print("正向运动学验证（零位）")
+        print("-"*60)
+        print("IKFast R (转换后):\n", R_ik_in_pb)
+        print("\nPyBullet R (in base):\n", pb_rot_in_base)
+        print("\n⭐ R_diff (应接近单位阵):\n", R_ik_in_pb.T @ pb_rot_in_base)
+        print("-"*60)
+        print(f"IKFast  位置: {p_ik}")
+        print(f"PyBullet位置: {pb_pos_in_base}")
+        print(f"位置差异: {np.linalg.norm(p_ik - pb_pos_in_base):.6f}m")
+        print("="*60)
+        
+        return p_ik, pb_pos_in_base
     def __init__(self, physics_client, urdfrootpath=LH_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(1.0, 0.6, 0.4),
+                 init_end_effector_pos=(1.2, 0.8, 0.4),
                  useOrientation=True, useNullSpace=True):
         
         if init_qpos is None:
@@ -620,24 +648,36 @@ class LHRobot(ArmRobot):
         import env.ikfastpy.LH_ikFast as LH_ikFast
         self.lh_kin = LH_ikFast.PyKinematics()
 
-        # 计算初始夹爪姿态（简化版本）
-        init_gripper_quat = mat2quat(
-            np.reshape(self.lh_kin.forward([0., 0., 0., 0., 0., 0.]), [3, 4])[:, :3]
-        )
+        # ===== 新增：定义 IKFast 到 PyBullet 的坐标系转换 =====
+        # 从 verify_fk 得知：R_pb = R_ikfast @ C (其中 C ≈ Ry(-90°))
+        self.C_ik2pb = np.array([
+            [0.0, 0.0, -1.0],
+            [0.0, 1.0,  0.0],
+            [1.0, 0.0,  0.0],
+        ])
         
-        # 计算朝下姿态（与其他机器人保持一致）
-        topdown_quat = quat_mul(np.array([0., 0., np.sin(np.pi / 4), np.cos(np.pi / 4)]), 
-                               init_gripper_quat)
-        # topdown_quat = quat_mul(np.array([np.sin(-np.pi / 4), 0., 0., np.cos(-np.pi / 4)]),   
-        #                init_gripper_quat)
+        # 计算初始夹爪姿态
+        fk_zero = self.lh_kin.forward([0., 0., 0., 0., 0., 0.])
+        R_ik_zero = np.reshape(fk_zero, [3, 4])[:, :3]
+        # 转换到 PyBullet 坐标系
+        R_pb_zero = R_ik_zero @ self.C_ik2pb
+        init_gripper_quat = mat2quat(R_pb_zero)
+
+        # # 计算初始夹爪姿态（简化版本）
+        # init_gripper_quat = mat2quat(
+        #     np.reshape(self.lh_kin.forward([0., 0., 0., 0., 0., 0.]), [3, 4])[:, :3]
+        # )
+        
+        topdown_quat = quat_mul(np.array([0, np.sin(-np.pi / 4), 0., np.cos(-np.pi / 4)]),   
+                       init_gripper_quat)
         init_gripper_euler = quat2euler(topdown_quat)
 
-        base_orn = [0., 0., 1., 0.]  # 四元数表示绕Z轴180度旋转
+        self.base_orn = [0., 0., 1., 0.]  # 四元数表示绕Z轴180度旋转
         
         super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,  
-                                          [0.7, 0.6, 0.0], base_orn, init_end_effector_pos,  
+                                          [0.7, 0.6, 0.0], self.base_orn, init_end_effector_pos,  
                                           init_gripper_euler, end_effector_index, reset_finger_joints,  
-                                          useOrientation, useNullSpace)  
+                                          useOrientation, useNullSpace)
         self.collision_pairs = set()
         self._verify_fk()
 
@@ -661,19 +701,20 @@ class LHRobot(ArmRobot):
   
     def run_ik(self, pos, orn):
         """使用 IKFast 求解器"""
-        # # 坐标变换（参考 UR2f85Robot 实现）
-        # ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
-        # ik_mat = quat2mat(orn)
-        # ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
-
         # 获取基座旋转矩阵  
-        base_rot_mat = quat2mat([0., 0., 1., 0.])
+        base_rot_mat = quat2mat(self.base_orn)
         # 坐标变换（包含旋转）  
         ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
         ik_pos = base_rot_mat.T @ ik_pos  # 添加基座旋转的逆变换
         ik_mat = quat2mat(orn)
         ik_mat = base_rot_mat.T @ ik_mat  # 姿态也需要变换
-        ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
+
+
+        # Step 2: PyBullet 坐标系 -> IKFast 坐标系 (关键!)
+        ik_mat_for_ikfast = ik_mat @ self.C_ik2pb.T
+        # 构造 IKFast 输入
+        ee_pose = np.concatenate([ik_mat_for_ikfast, ik_pos], axis=-1)
+        # ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
 
         # 调试输出
         print(f"[DEBUG] 目标位置: {pos}")
