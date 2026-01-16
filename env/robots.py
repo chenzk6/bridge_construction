@@ -620,12 +620,30 @@ class LHRobot(ArmRobot):
         print("="*60)
         
         return p_ik, pb_pos_in_base
+
+    def test_z_offset(self):  
+        """测试Z轴偏移"""  
+        # 测试零位  
+        zero_joints = [0., 0., 0., 0., 0., 0.]  
+        
+        # IKFast正向运动学  
+        fk_result = self.lh_kin.forward(zero_joints)  
+        fk_pos = np.array(fk_result[3::4])  # 提取Z坐标  
+        
+        # PyBullet正向运动学  
+        for i, joint in enumerate(zero_joints):  
+            self.p.resetJointState(self._robot, self.motorIndices[i], joint)  
+        pb_pos = np.array(self.get_end_effector_pos())  
+        
+        print(f"IKFast Z: {fk_pos[2]:.6f}")  
+        print(f"PyBullet Z: {pb_pos[2]:.6f}")  
+        print(f"Z轴差异: {(fk_pos[2] - pb_pos[2]):.6f}")
     def __init__(self, physics_client, urdfrootpath=LH_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(1.2, 0.6, 0.3),
+                 init_end_effector_pos=(1.3, 0.6, 0.2),
                  useOrientation=True, useNullSpace=True):
         
         if init_qpos is None:
-            init_qpos = [0, 0, 0, 0, 0, 0, 0, 0, 0,
+            init_qpos = [0, 0, 0, 0, 0, np.pi / 2, 0, 0, 0,
                          0, 0, 0, 0, 0, 0]
         
         end_effector_index = 7
@@ -655,18 +673,25 @@ class LHRobot(ArmRobot):
         #     np.reshape(self.lh_kin.forward([0., 0., 0., 0., 0., 0.]), [3, 4])[:, :3]
         # )
         
-        topdown_quat = quat_mul(np.array([0, np.sin(-np.pi / 4), 0., np.cos(-np.pi / 4)]), 
+        topdown_quat = quat_mul(np.array([0, np.sin(-np.pi / 4), 0., np.cos(np.pi / 4)]), 
                        init_gripper_quat)
         init_gripper_euler = quat2euler(topdown_quat)
 
         self.base_orn = [0., 0., 1., 0.]  # 四元数表示绕Z轴180度旋转
+        # super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,
+        #                                   [0.7, 0.6, 0.0], self.base_orn, init_end_effector_pos,
+        #                                   init_gripper_euler, end_effector_index, reset_finger_joints,
+        #                                   useOrientation, useNullSpace)
+
+        #抓取积木时适应不同情况版本
         super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,
                                           [0.7, 0.6, 0.0], self.base_orn, init_end_effector_pos,
                                           init_gripper_euler, end_effector_index, reset_finger_joints,
-                                          useOrientation, useNullSpace)
+                                          useOrientation, useNullSpace, init_gripper_euler,
+                                          np.array([0., 1., 0.]), init_gripper_quat)
         self.collision_pairs = set()
         # self._verify_fk()
-
+        # self.test_z_offset()
     def _post_gripper(self):
         # 设置夹爪关节索引
         self.gripper_joint_inds = [8, 9, 10, 11, 12, 13]
@@ -692,6 +717,7 @@ class LHRobot(ArmRobot):
         # 坐标变换（包含旋转）  
         ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
         ik_pos = base_rot_mat.T @ ik_pos  # 添加基座旋转的逆变换
+        ik_pos[2] += 0.048  # 补偿z轴偏移
         ik_mat = quat2mat(orn)
         ik_mat = base_rot_mat.T @ ik_mat  # 姿态也需要变换
 
