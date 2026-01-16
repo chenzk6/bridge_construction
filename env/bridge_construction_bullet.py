@@ -13,7 +13,7 @@ from collections import deque
 
 
 BASIC_COLORS = [[1.0, 0, 0], [1, 1, 0], [0.2, 0.8, 0.8], [0.8, 0.2, 0.8], [0, 0, 0], [0.0, 0.0, 1.0], [0.5, 0.2, 0.0]]
-
+cliff_x_ = 1.15
 
 def _out_of_reach(object_pos, cliff0_center, cliff1_center, object_size, cliff_size, cos_theta=0):
     # Out of reach will happen at reset,
@@ -291,8 +291,8 @@ class BulletBridgeConstructionLow(RobotGymBaseEnv):
         col_id = self.p.createCollisionShape(self.p.GEOM_BOX, halfExtents=[self._cliff_thickness, self._cliff_height, self._cliff_thickness])
         vis_id = self.p.createVisualShape(self.p.GEOM_BOX, halfExtents=[self._cliff_thickness, self._cliff_height, self._cliff_thickness])
         cliff_mass = 0  # in kg
-        self.body_cliff0 = self.p.createMultiBody(cliff_mass, col_id, vis_id, [1.0, 0.3, self._cliff_height], [0.707, 0., 0., 0.707])
-        self.body_cliff1 = self.p.createMultiBody(cliff_mass, col_id, vis_id, [1.0, 0.9, self._cliff_height], [0.707, 0., 0., 0.707])
+        self.body_cliff0 = self.p.createMultiBody(cliff_mass, col_id, vis_id, [cliff_x_, 0.3, self._cliff_height], [0.707, 0., 0., 0.707])
+        self.body_cliff1 = self.p.createMultiBody(cliff_mass, col_id, vis_id, [cliff_x_, 0.9, self._cliff_height], [0.707, 0., 0., 0.707])
         # Blocks
         self.all_collision_shapes = []
         self.all_visual_shapes = []
@@ -336,10 +336,10 @@ class BulletBridgeConstructionLow(RobotGymBaseEnv):
     def _reset_sim(self):
         self.robot.reset()
         self.p.resetBasePositionAndOrientation(
-            self.body_cliff0, [1.0, self.cliff0_center, self._cliff_height], [0.707, 0., 0., 0.707]
+            self.body_cliff0, [cliff_x_, self.cliff0_center, self._cliff_height], [0.707, 0., 0., 0.707]
         )
         self.p.resetBasePositionAndOrientation(
-            self.body_cliff1, [1.0, self.cliff1_center, self._cliff_height], [0.707, 0., 0., 0.707]
+            self.body_cliff1, [cliff_x_, self.cliff1_center, self._cliff_height], [0.707, 0., 0., 0.707]
         )
         self.p.stepSimulation()
         self.cliff0_boundary = self.cliff0_center + self._cliff_thickness
@@ -702,9 +702,9 @@ class BulletBridgeConstructionHigh(gym.Env):
 
     def get_cliff_pos(self, index: int):
         if index == 0:
-            return np.array([1.0, self.env.cliff0_center, self.env.cliff_size[1]])
+            return np.array([cliff_x_, self.env.cliff0_center, self.env.cliff_size[1]])
         if index == 1:
-            return np.array([1.0, self.env.cliff1_center, self.env.cliff_size[1]])
+            return np.array([cliff_x_, self.env.cliff1_center, self.env.cliff_size[1]])
         raise RuntimeError
 
     def get_block_reset_pos(self, index: int):
@@ -734,11 +734,11 @@ class BulletBridgeConstructionHigh(gym.Env):
             for j in range(len(servo_angles)):
                 self.env.p.resetJointState(self.env.robot._robot, self.env.robot.motorIndices[j], servo_angles[j])
         self.env.p.resetBasePositionAndOrientation(
-            self.env.body_cliff0, np.array([1.0, cliff0_center, self.env._cliff_height]),
+            self.env.body_cliff0, np.array([cliff_x_, cliff0_center, self.env._cliff_height]),
             np.array([0.707, 0, 0, 0.707])
         )
         self.env.p.resetBasePositionAndOrientation(
-            self.env.body_cliff1, np.array([1.0, cliff1_center, self.env._cliff_height]),
+            self.env.body_cliff1, np.array([cliff_x_, cliff1_center, self.env._cliff_height]),
             np.array([0.707, 0., 0., 0.707])
         )
         cur_num_blocks = len(obj_poses)
@@ -771,7 +771,7 @@ class BulletBridgeConstructionHigh(gym.Env):
         if idx >= 0:
             # 基于新机械臂位置调整目标位置
             y_pos = 0.6  # 基于机械臂基座y=0.6
-            x_pos = 1.0  # 确保在0.56米工作半径内
+            x_pos = cliff_x_  # 确保在0.56米工作半径内
             z_scale = self.env._cliff_height if self.narrow_z else self.action_scale
             if self.action_2d:
                 target_pos = np.array([x_pos, y_pos + action[1] * self.action_scale, 2 * self.env._cliff_height + action[2] * z_scale])
