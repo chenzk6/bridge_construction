@@ -16,6 +16,7 @@ def main(args):
     log_dir = args.log_path if args.log_path is not None else "/tmp/stable_baselines_" + time.strftime('%Y-%m-%d-%H-%M-%S')
     configure_logger(log_dir)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print("Device:", device)
     # Make env
     env_kwargs = get_env_kwargs(args.env_id, args.horizon, args.random_size, args.min_num_blocks, args.discrete_height,
                                 args.random_mode, args.action_scale, args.restart_rate, args.noop, args.robot,
