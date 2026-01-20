@@ -525,7 +525,7 @@ class UR2f85Robot(ArmRobot):
 
 class XArm7Robot(ArmRobot):
     def __init__(self, physics_client, urdfrootpath=XARM_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(1.0, 0.5, 0.6),#(1.0, 0.3, 0.6)
+                 init_end_effector_pos=(0.8, 0.1, 0.2),#(1.0, 0.3, 0.6)
                  useOrientation=True, useNullSpace=True):
         if init_qpos is None:
             # init_qpos = [0, 0.0, 0.0786759, 0.0, 1.54692674, 0.0, 1.46825087, 0.,
@@ -581,46 +581,6 @@ class XArm7Robot(ArmRobot):
 from scipy.spatial.transform import Rotation as R
 
 class LHRobot(ArmRobot):
-    def _verify_fk(self):
-        zero_joints = [0., 0., 0., 0., 0., 0.]
-        
-        # IKFast FK
-        fk_result = self.lh_kin.forward(zero_joints)
-        fk_matrix = np.reshape(fk_result, [3, 4])
-        R_ik = fk_matrix[:, :3]
-        p_ik = fk_matrix[:, 3]
-        
-        # 转换到 PyBullet 坐标系
-        R_ik_in_pb = R_ik @ self.C_ik2pb
-        
-        # PyBullet FK
-        self.p.resetJointStatesMultiDof(self._robot, range(6), [[0.]]*6)
-        pb_state = self.p.getLinkState(self._robot, self.end_effector_index)
-        pb_quat = pb_state[1]
-        pb_pos_world = np.array(pb_state[0])
-        pb_rot = quat2mat(pb_quat)
-        
-        # 转换到 base 坐标系
-        R_w_b = quat2mat(self.base_orn)
-        p_w_b = np.array(self.base_pos)
-        pb_rot_in_base = R_w_b.T @ pb_rot
-        pb_pos_in_base = R_w_b.T @ (pb_pos_world - p_w_b)
-        
-        # 对比
-        print("="*60)
-        print("正向运动学验证（零位）")
-        print("-"*60)
-        print("IKFast R (转换后):\n", R_ik_in_pb)
-        print("\nPyBullet R (in base):\n", pb_rot_in_base)
-        print("\n⭐ R_diff (应接近单位阵):\n", R_ik_in_pb.T @ pb_rot_in_base)
-        print("-"*60)
-        print(f"IKFast  位置: {p_ik}")
-        print(f"PyBullet位置: {pb_pos_in_base}")
-        print(f"位置差异: {np.linalg.norm(p_ik - pb_pos_in_base):.6f}m")
-        print("="*60)
-        
-        return p_ik, pb_pos_in_base
-
     def test_z_offset(self):  
         """测试Z轴偏移"""  
         # 测试零位  
@@ -639,7 +599,7 @@ class LHRobot(ArmRobot):
         print(f"PyBullet Z: {pb_pos[2]:.6f}")  
         print(f"Z轴差异: {(fk_pos[2] - pb_pos[2]):.6f}")
     def __init__(self, physics_client, urdfrootpath=LH_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(1.3, 0.6, 0.2),
+                 init_end_effector_pos=(1.0, 0.6, 0.2),
                  useOrientation=True, useNullSpace=True):
         
         if init_qpos is None:
@@ -690,7 +650,6 @@ class LHRobot(ArmRobot):
                                           useOrientation, useNullSpace, init_gripper_euler,
                                           np.array([0., 1., 0.]), init_gripper_quat)
         self.collision_pairs = set()
-        # self._verify_fk()
         # self.test_z_offset()
     def _post_gripper(self):
         # 设置夹爪关节索引
@@ -713,26 +672,32 @@ class LHRobot(ArmRobot):
     def run_ik(self, pos, orn):
         """使用 IKFast 求解器"""
         # 获取基座旋转矩阵  
+        # print(f"pos:{pos}")
         base_rot_mat = quat2mat(self.base_orn)
         # 坐标变换（包含旋转）  
         ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
-        ik_pos = base_rot_mat.T @ ik_pos  # 添加基座旋转的逆变换
+        # print(f"ik_pos:{ik_pos}")
         ik_pos[2] += 0.048  # 补偿z轴偏移
+        # print(f"ik_pos:{ik_pos}")
+        ik_pos = base_rot_mat.T @ ik_pos  # 添加基座旋转的逆变换
+        # print(f"ik_pos:{ik_pos}")
         ik_mat = quat2mat(orn)
+        # print(f"ik_mat:{ik_mat}")
         ik_mat = base_rot_mat.T @ ik_mat  # 姿态也需要变换
+        
 
 
         # Step 2: PyBullet 坐标系 -> IKFast 坐标系 (关键!)
         ik_mat_for_ikfast = ik_mat @ self.C_ik2pb.T
+        # print(f"ik_mat_for_ikfast:{ik_mat_for_ikfast}")
         # 构造 IKFast 输入
         ee_pose = np.concatenate([ik_mat_for_ikfast, ik_pos], axis=-1)
+        # print(f"ee_pose:{ee_pose}")
         # ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
 
         # 调试输出
-        print(f"[DEBUG] 目标位置: {pos}")
-        print(f"[DEBUG] 相对位置: {ik_pos.T}")
-        print(f"[DEBUG] 旋转矩阵:\n{ik_mat}")
-        print(f"[DEBUG] ee_pose: {ee_pose.reshape(-1)}")
+        # print(f"[DEBUG] 目标位置: {pos}")
+        # print(f"[DEBUG] 相对位置: {ik_pos.T}")
         
         # 调用 IKFast 求解
         joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1).tolist())

@@ -47,7 +47,7 @@ def get_env_kwargs(env_id, horizon=50, random_size=False, min_num_blocks=3, disc
         else:
             num_blocks = int(re.search("(?<=FetchBridgeBullet)(\d+)", env_id).group(0))
             thickness = 0.025
-            cliff_thickness = 0.1
+            cliff_thickness = 0.06
         cliff_height = 0.1
         env_kwargs = dict(max_episode_steps=horizon, num_blocks=num_blocks,
                           random_size=random_size,
