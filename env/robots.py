@@ -567,6 +567,7 @@ class XArm7Robot(ArmRobot):
         return 0.3 * ctrl * np.array(self.gripper_multipliers)
 
     def run_ik(self, pos, orn):
+        print(f"pos--------{pos}")
         ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
         ik_mat = quat2mat(orn)
         ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
@@ -603,7 +604,7 @@ class LHRobot(ArmRobot):
                  useOrientation=True, useNullSpace=True):
         
         if init_qpos is None:
-            init_qpos = [0, 0, 0, 0, 0, np.pi / 2, 0, 0, 0,
+            init_qpos = [0, -np.pi / 2, 0, 0, 0, 0, 0, 0, 0,
                          0, 0, 0, 0, 0, 0]
         
         end_effector_index = 7
@@ -671,8 +672,8 @@ class LHRobot(ArmRobot):
   
     def run_ik(self, pos, orn):
         """使用 IKFast 求解器"""
-        # 获取基座旋转矩阵  
-        # print(f"pos:{pos}")
+        # 获取基座旋转矩阵
+        print(f"pos=========:{pos}")
         base_rot_mat = quat2mat(self.base_orn)
         # 坐标变换（包含旋转）  
         ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
