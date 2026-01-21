@@ -1,29 +1,56 @@
 import os, time
 import math
 import numpy as np
-from env.bullet_rotations import quat2euler, quat_mul, euler2quat, quat2mat, is_rotation_mat, mat2quat
+from env.bullet_rotations import (
+    quat2euler,
+    quat_mul,
+    euler2quat,
+    quat2mat,
+    is_rotation_mat,
+    mat2quat,
+)
 
 
-KINOVA_MODEL_DIR = os.path.join(os.path.dirname(__file__), 'kinova_description', 'urdf')
-UR_MODEL_DIR = os.path.join(os.path.dirname(__file__), 'ur_description', 'urdf')
-XARM_MODEL_DIR = os.path.join(os.path.dirname(__file__), 'xarm_description', 'urdf')
-LH_MODEL_DIR = os.path.join(os.path.dirname(__file__), 'linghou_description', 'urdf')
+KINOVA_MODEL_DIR = os.path.join(os.path.dirname(__file__), "kinova_description", "urdf")
+UR_MODEL_DIR = os.path.join(os.path.dirname(__file__), "ur_description", "urdf")
+XARM_MODEL_DIR = os.path.join(os.path.dirname(__file__), "xarm_description", "urdf")
+LH_MODEL_DIR = os.path.join(os.path.dirname(__file__), "linghou_description", "urdf")
 
 
 class ArmRobot(object):
-    '''
+    """
     Common base for 6 DoF Arm
-    '''
-    def __init__(self, physics_client, filename="", urdfrootpath=None, init_qpos=None, base_pos=None, base_orn=None,
-                 init_end_effector_pos=None, init_end_effector_orn=None, end_effector_index=None, reset_finger_joints=None,
-                 useOrientation=True, useNullSpace=True, topdown_euler=np.array([0., 0., 0.]),
-                 init_gripper_axis=np.array([0., 0., 1.]), init_gripper_quat=np.array([0., 0., 0., 1.])):
+    """
+
+    def __init__(
+        self,
+        physics_client,
+        filename="",
+        urdfrootpath=None,
+        init_qpos=None,
+        base_pos=None,
+        base_orn=None,
+        init_end_effector_pos=None,
+        init_end_effector_orn=None,
+        end_effector_index=None,
+        reset_finger_joints=None,
+        useOrientation=True,
+        useNullSpace=True,
+        topdown_euler=np.array([0.0, 0.0, 0.0]),
+        init_gripper_axis=np.array([0.0, 0.0, 1.0]),
+        init_gripper_quat=np.array([0.0, 0.0, 0.0, 1.0]),
+    ):
         self.p = physics_client
         self.urdfrootpath = urdfrootpath
         self.endEffectorPos = init_end_effector_pos
         self.endEffectorOrn = init_end_effector_orn
         self.base_pos = base_pos
-        self._robot = self.p.loadURDF(os.path.join(self.urdfrootpath, filename), base_pos, base_orn, useFixedBase=1)
+        self._robot = self.p.loadURDF(
+            os.path.join(self.urdfrootpath, filename),
+            base_pos,
+            base_orn,
+            useFixedBase=1,
+        )
         self.init_qpos = init_qpos
         self.end_effector_index = end_effector_index
         self.motorNames = []
@@ -72,21 +99,33 @@ class ArmRobot(object):
         # print(self.motorNames, self.motorIndices)
         # print('before:', p.getLinkState(self._kinova, self.end_effector_index)[0], p.getLinkState(self._kinova, self.end_effector_index)[1])
         endEffectorOrn = self.p.getQuaternionFromEuler(self.endEffectorOrn)
-        target_endpos = np.asarray(self.endEffectorPos) # + np.concatenate([np.random.uniform(-0.15, 0.15, size=2), [0.]])
+        target_endpos = np.asarray(
+            self.endEffectorPos
+        )  # + np.concatenate([np.random.uniform(-0.15, 0.15, size=2), [0.]])
         # print('target endpos', target_endpos)
         jointPoses = self.run_ik(target_endpos, endEffectorOrn)[0]
         print(f"IK 求解结果长度: {len(jointPoses)}")
         if len(np.array(jointPoses).shape) > 1:
-            jointPoses = jointPoses[np.argmin([np.linalg.norm(pos - np.array(self.init_qpos)[self.motorIndices[:self.ndof]]) for pos in jointPoses])]
-        jointPoses = np.concatenate([jointPoses[:self.ndof], self.reset_finger_joints])
+            jointPoses = jointPoses[
+                np.argmin(
+                    [
+                        np.linalg.norm(
+                            pos
+                            - np.array(self.init_qpos)[self.motorIndices[: self.ndof]]
+                        )
+                        for pos in jointPoses
+                    ]
+                )
+            ]
+        jointPoses = np.concatenate([jointPoses[: self.ndof], self.reset_finger_joints])
         for i in range(len(self.motorIndices)):
             self.p.resetJointState(self._robot, self.motorIndices[i], jointPoses[i])
         self.p.stepSimulation()
 
-        actual_pos = self.get_end_effector_pos()  
-        target_pos = np.asarray(self.endEffectorPos)  
-        print(f"目标位置: {target_pos}")  
-        print(f"实际位置: {actual_pos}")  
+        actual_pos = self.get_end_effector_pos()
+        target_pos = np.asarray(self.endEffectorPos)
+        print(f"目标位置: {target_pos}")
+        print(f"实际位置: {actual_pos}")
         print(f"位置误差: {np.linalg.norm(actual_pos - target_pos)}")
         # print('after reset, endpos', self.get_end_effector_pos(), self.get_end_effector_orn(as_type="quat"), jointPoses)
         # for i in range(self.num_joints):
@@ -127,14 +166,25 @@ class ArmRobot(object):
         state_before_ik = self.p.saveState()
         counter = 0
         threshold = 20
-        joint_poses = [self.p.getJointState(self._robot, self.motorIndices[i])[0] for i in range(len(self.motorIndices))]
-        while np.linalg.norm(np.array(self.get_end_effector_pos()) - np.array(pos)) > 1e-2 and counter < threshold:
+        joint_poses = [
+            self.p.getJointState(self._robot, self.motorIndices[i])[0]
+            for i in range(len(self.motorIndices))
+        ]
+        while (
+            np.linalg.norm(np.array(self.get_end_effector_pos()) - np.array(pos)) > 1e-2
+            and counter < threshold
+        ):
             if self.useNullSpace:
                 if self.useOrientation:
                     joint_poses = self.p.calculateInverseKinematics(
-                        self._robot, self.end_effector_index, pos, orn,
-                        self.IKInfo["lowerLimits"], self.IKInfo["upperLimits"],
-                        self.IKInfo["jointRanges"], self.IKInfo["restPoses"],
+                        self._robot,
+                        self.end_effector_index,
+                        pos,
+                        orn,
+                        self.IKInfo["lowerLimits"],
+                        self.IKInfo["upperLimits"],
+                        self.IKInfo["jointRanges"],
+                        self.IKInfo["restPoses"],
                     )
                     joint_poses = np.array(joint_poses)
                     # print("[Before mode]", joint_poses)
@@ -145,14 +195,22 @@ class ArmRobot(object):
                     # print("[After mode]", joint_poses)
                 else:
                     joint_poses = self.p.calculateInverseKinematics(
-                        self._robot, self.end_effector_index, pos,
-                        lowerLimits=self.IKInfo["lowerLimits"], upperLimits=self.IKInfo["upperLimits"],
-                        jointRanges=self.IKInfo["jointRanges"], restPoses=self.IKInfo["restPoses"]
+                        self._robot,
+                        self.end_effector_index,
+                        pos,
+                        lowerLimits=self.IKInfo["lowerLimits"],
+                        upperLimits=self.IKInfo["upperLimits"],
+                        jointRanges=self.IKInfo["jointRanges"],
+                        restPoses=self.IKInfo["restPoses"],
                     )
             else:
                 if self.useOrientation:
                     joint_poses = self.p.calculateInverseKinematics(
-                        self._robot, self.end_effector_index, pos, orn, jointDamping=self.IKInfo["jointDamping"]
+                        self._robot,
+                        self.end_effector_index,
+                        pos,
+                        orn,
+                        jointDamping=self.IKInfo["jointDamping"],
                     )
                 else:
                     joint_poses = self.p.calculateInverseKinematics(
@@ -160,15 +218,25 @@ class ArmRobot(object):
                     )
             counter += 1
             for i in range(len(self.motorIndices)):
-                self.p.resetJointState(self._robot, self.motorIndices[i], joint_poses[i])
+                self.p.resetJointState(
+                    self._robot, self.motorIndices[i], joint_poses[i]
+                )
             self.p.stepSimulation()
 
         cur_pos = np.array(self.get_end_effector_pos())
         pos_error = np.linalg.norm(cur_pos - np.array(pos))
-        orn_diff = self.p.getDifferenceQuaternion(self.get_end_effector_orn(as_type="quat"), np.array(orn))
+        orn_diff = self.p.getDifferenceQuaternion(
+            self.get_end_effector_orn(as_type="quat"), np.array(orn)
+        )
         orn_error = np.arccos(orn_diff[-1]) * 2
-        info = {'counter': counter, 'pos_error': pos_error, 'orn_error': orn_error, 'is_success': pos_error < 0.01,
-                'target_pos': pos, 'cur_pos': cur_pos}
+        info = {
+            "counter": counter,
+            "pos_error": pos_error,
+            "orn_error": orn_error,
+            "is_success": pos_error < 0.01,
+            "target_pos": pos,
+            "cur_pos": cur_pos,
+        }
         self.p.restoreState(state_before_ik)
         self.p.removeState(state_before_ik)
         return joint_poses, info
@@ -185,10 +253,10 @@ class ArmRobot(object):
             return np.asarray(self.p.getEulerFromQuaternion(state[1]))
 
     def gen_gripper_joint_command(self, ctrl):
-        '''
+        """
         :param ctrl: scalar in range [0, 1], 0: open, 1: close
         :return:
-        '''
+        """
         raise NotImplementedError
 
     def position_control(self, tgt_joint_pos, position_gain=None):
@@ -196,65 +264,136 @@ class ArmRobot(object):
         kwargs = {}
         if position_gain is not None:
             if isinstance(position_gain, float):
-                kwargs['positionGains'] = [position_gain] * len(tgt_joint_pos)
-                kwargs['velocityGains'] = [0.1 * position_gain] * len(tgt_joint_pos)
+                kwargs["positionGains"] = [position_gain] * len(tgt_joint_pos)
+                kwargs["velocityGains"] = [0.1 * position_gain] * len(tgt_joint_pos)
             else:
                 assert len(position_gain) == len(tgt_joint_pos)
-                kwargs['positionGains'] = np.array(position_gain)
-                kwargs['velocityGains'] = 0.1 * np.array(position_gain)
-        self.p.setJointMotorControlArray(self._robot, self.motorIndices, self.p.POSITION_CONTROL, tgt_joint_pos,
-                                         tgt_velocities, [self.maxForce[j] for j in self.motorIndices],
-                                         **kwargs)
+                kwargs["positionGains"] = np.array(position_gain)
+                kwargs["velocityGains"] = 0.1 * np.array(position_gain)
+        self.p.setJointMotorControlArray(
+            self._robot,
+            self.motorIndices,
+            self.p.POSITION_CONTROL,
+            tgt_joint_pos,
+            tgt_velocities,
+            [self.maxForce[j] for j in self.motorIndices],
+            **kwargs,
+        )
 
 
 class KinovaRobot(ArmRobot):
-    def __init__(self, physics_client, urdfrootpath=KINOVA_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(0.4, 0., 0.1), init_end_effector_orn=(0, -math.pi, math.pi/2), lock_finger=False,
-                 useOrientation=True, useNullSpace=True):
+    def __init__(
+        self,
+        physics_client,
+        urdfrootpath=KINOVA_MODEL_DIR,
+        init_qpos=None,
+        init_end_effector_pos=(0.4, 0.0, 0.1),
+        init_end_effector_orn=(0, -math.pi, math.pi / 2),
+        lock_finger=False,
+        useOrientation=True,
+        useNullSpace=True,
+    ):
 
         if init_qpos is None:
-            init_qpos = [0., 0., -0.127, 4.234, 1.597, -0.150, 0.585, 2.860, 0.0,
-                         0.7505, 0.0, 0.7505, 0.0]
+            init_qpos = [
+                0.0,
+                0.0,
+                -0.127,
+                4.234,
+                1.597,
+                -0.150,
+                0.585,
+                2.860,
+                0.0,
+                0.7505,
+                0.0,
+                0.7505,
+                0.0,
+            ]
         self.lock_finger = lock_finger
         end_effector_index = 8
         self.finger_index = [9, 11]
         self.finger_tip_index = [10, 12]
-        reset_finger_joints = [0.7505, 0., 0.7505, 0.]
-        super(KinovaRobot, self).__init__(physics_client, "j2n6s200.urdf", urdfrootpath, init_qpos, [0.8, 0.6, 0.0],
-                                          [0., 0., 1., 0.], init_end_effector_pos, init_end_effector_orn,
-                                          end_effector_index, reset_finger_joints,
-                                          useOrientation, useNullSpace, np.array([0., -np.pi, 0.]),
-                                          np.array([0., 0., 1.]))
+        reset_finger_joints = [0.7505, 0.0, 0.7505, 0.0]
+        super(KinovaRobot, self).__init__(
+            physics_client,
+            "j2n6s200.urdf",
+            urdfrootpath,
+            init_qpos,
+            [0.8, 0.6, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            init_end_effector_pos,
+            init_end_effector_orn,
+            end_effector_index,
+            reset_finger_joints,
+            useOrientation,
+            useNullSpace,
+            np.array([0.0, -np.pi, 0.0]),
+            np.array([0.0, 0.0, 1.0]),
+        )
 
     def compute_ik_information(self):
-        """ Finds the values for the IK solver. """
+        """Finds the values for the IK solver."""
         joint_information = list(
-            map(lambda i: self.p.getJointInfo(self._robot, i),
-                self.motorIndices))
+            map(lambda i: self.p.getJointInfo(self._robot, i), self.motorIndices)
+        )
         self.IKInfo = {}
-        assert all([len(joint_information[i]) == 17 for i in range(len(self.motorIndices))])
+        assert all(
+            [len(joint_information[i]) == 17 for i in range(len(self.motorIndices))]
+        )
         self.IKInfo["solver"] = 0
         self.IKInfo["jointDamping"] = [0.1] * len(self.motorIndices)
         self.IKInfo["lowerLimits"] = [info[8] for info in joint_information]
         self.IKInfo["upperLimits"] = [info[9] for info in joint_information]
         # TODO: tweak jointRange, resetPose?
         self.IKInfo["jointRanges"] = [50] * len(self.motorIndices)
-        self.IKInfo["restPoses"] = [-0.127, 4.234, 1.597, -0.150, 0.585, 2.860, 0.7505, 0.0, 0.7505, 0.0]
+        self.IKInfo["restPoses"] = [
+            -0.127,
+            4.234,
+            1.597,
+            -0.150,
+            0.585,
+            2.860,
+            0.7505,
+            0.0,
+            0.7505,
+            0.0,
+        ]
 
     def get_observation(self):
-        end_effector_state = self.p.getLinkState(self._robot, self.end_effector_index, computeLinkVelocity=1)
-        end_effector_pos, end_effector_orn, _, _, _, _, end_effector_vl, end_effector_va = end_effector_state
+        end_effector_state = self.p.getLinkState(
+            self._robot, self.end_effector_index, computeLinkVelocity=1
+        )
+        (
+            end_effector_pos,
+            end_effector_orn,
+            _,
+            _,
+            _,
+            _,
+            end_effector_vl,
+            end_effector_va,
+        ) = end_effector_state
         end_effector_orn = self.p.getEulerFromQuaternion(end_effector_orn)
-        finger1_state, finger2_state = self.p.getJointStates(self._robot, self.finger_index)
-        tip1_state, tip2_state = self.p.getJointStates(self._robot, self.finger_tip_index)
+        finger1_state, finger2_state = self.p.getJointStates(
+            self._robot, self.finger_index
+        )
+        tip1_state, tip2_state = self.p.getJointStates(
+            self._robot, self.finger_tip_index
+        )
         finger1_pos, finger1_vel, *_ = finger1_state
         finger2_pos, finger2_vel, *_ = finger2_state
         tip1_pos, tip1_vel, *_ = tip1_state
         tip2_pos, tip2_vel, *_ = tip2_state
         # return end_effector_pos, end_effector_orn, end_effector_vl, (finger1_pos, finger2_pos), (tip1_pos, tip2_pos), \
         #        (finger1_vel, finger2_vel), (tip1_vel, tip2_vel)
-        return np.array(end_effector_pos), np.array(end_effector_orn), np.array(end_effector_vl), \
-               np.array([finger1_pos, finger2_pos]), np.array([finger1_vel, finger2_vel])
+        return (
+            np.array(end_effector_pos),
+            np.array(end_effector_orn),
+            np.array(end_effector_vl),
+            np.array([finger1_pos, finger2_pos]),
+            np.array([finger1_vel, finger2_vel]),
+        )
 
     def apply_action(self, action):
         action = np.array(action)
@@ -267,16 +406,17 @@ class KinovaRobot(ArmRobot):
         if self.useOrientation:
             # action[3: 6]: delta rotation, orn: target rotation
             # action[3: 6]: roll around X, pitch around Y, yaw around Z
-            quat = self.p.getQuaternionFromEuler(action[3: 6])
+            quat = self.p.getQuaternionFromEuler(action[3:6])
             mat = np.array(self.p.getMatrixFromQuaternion(quat)).reshape((3, 3))
             cur_quat = self.get_end_effector_orn(as_type="quat")
             cur_mat = np.array(self.p.getMatrixFromQuaternion(cur_quat)).reshape((3, 3))
             tgt_mat = mat @ cur_mat
             from env.bullet_rotations import mat2quat
+
             orn = mat2quat(tgt_mat)
             # orn = self.p.getQuaternionFromEuler(action[3:6])
         else:
-            orn = [0., 0., 0., 1.]
+            orn = [0.0, 0.0, 0.0, 1.0]
         # fingers and tips
         finger_ctrl = action[-1]
         # fingers = action[6:8]
@@ -293,15 +433,17 @@ class KinovaRobot(ArmRobot):
         # current_joint_states = self.p.getJointStates(self._kinova, self.motorIndices)
         # current_joint_pos = [state[0] for state in current_joint_states]
         for i in range(len(self.motorIndices)):
-            self.p.setJointMotorControl2(bodyUniqueId=self._robot,
-                                         jointIndex=self.motorIndices[i],
-                                         controlMode=self.p.POSITION_CONTROL,
-                                         targetPosition=tgt_joint_pos[i],
-                                         targetVelocity=0,
-                                         force=self.maxForce[self.motorIndices[i]],
-                                         # maxVelocity=self.maxVelocity[self.motorIndices[i]],
-                                         positionGain=1,
-                                         velocityGain=0.1, )
+            self.p.setJointMotorControl2(
+                bodyUniqueId=self._robot,
+                jointIndex=self.motorIndices[i],
+                controlMode=self.p.POSITION_CONTROL,
+                targetPosition=tgt_joint_pos[i],
+                targetVelocity=0,
+                force=self.maxForce[self.motorIndices[i]],
+                # maxVelocity=self.maxVelocity[self.motorIndices[i]],
+                positionGain=1,
+                velocityGain=0.1,
+            )
         # for i in range(len(self.motorIndices)):
         #     targetVelocity = 12 * (jointPoses[i] - current_jointPos[i])
         #     targetVelocity = np.clip(targetVelocity, -self.maxVelocity[self.motorIndices[i]], self.maxVelocity[self.motorIndices[i]])
@@ -341,8 +483,12 @@ class KinovaRobot(ArmRobot):
         #                                  )
 
     def get_finger_state(self):
-        finger1_state, finger2_state = self.p.getJointStates(self._robot, self.finger_index)
-        finger1_tip, finger2_tip = self.p.getJointStates(self._robot, self.finger_tip_index)
+        finger1_state, finger2_state = self.p.getJointStates(
+            self._robot, self.finger_index
+        )
+        finger1_tip, finger2_tip = self.p.getJointStates(
+            self._robot, self.finger_tip_index
+        )
         finger1_pos, *_ = finger1_state
         finger2_pos, *_ = finger2_state
         finger1_tip_pos, *_ = finger1_tip
@@ -354,56 +500,130 @@ class KinovaRobot(ArmRobot):
             for i in self.finger_index:
                 self.p.resetJointState(self._robot, i, 1.51)
             for i in self.finger_tip_index:
-                self.p.resetJointState(self._robot, i, 0.)
+                self.p.resetJointState(self._robot, i, 0.0)
 
     def gen_gripper_joint_command(self, ctrl):
-        return [0.3 + 0.67 * ctrl, 0., 0.3 + 0.67 * ctrl, 0.]
+        return [0.3 + 0.67 * ctrl, 0.0, 0.3 + 0.67 * ctrl, 0.0]
 
 
 class Kinova2f85Robot(ArmRobot):
-    def __init__(self, physics_client, urdfrootpath=KINOVA_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(0.4, 0., 0.5), init_end_effector_orn=(0, -math.pi, math.pi/2),
-                 useOrientation=True, useNullSpace=True):
+    def __init__(
+        self,
+        physics_client,
+        urdfrootpath=KINOVA_MODEL_DIR,
+        init_qpos=None,
+        init_end_effector_pos=(0.4, 0.0, 0.5),
+        init_end_effector_orn=(0, -math.pi, math.pi / 2),
+        useOrientation=True,
+        useNullSpace=True,
+    ):
         if init_qpos is None:
-            init_qpos = [0., 0., -0.127, 4.234, 1.597, -0.150, 0.585, 0., 0.,
-                         0., 0., -0., 0., 0.,
-                         0., 0., -0., 0., 0.]  # 19d
+            init_qpos = [
+                0.0,
+                0.0,
+                -0.127,
+                4.234,
+                1.597,
+                -0.150,
+                0.585,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                -0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                -0.0,
+                0.0,
+                0.0,
+            ]  # 19d
 
         end_effector_index = 8
-        reset_finger_joints = [0., 0., 0., 0., 0., 0.]  # TODO
-        super(Kinova2f85Robot, self).__init__(physics_client, "j2n6robotiq_2f_85.urdf", urdfrootpath, init_qpos,
-                                              [0.7, 0.5, 0.0], [0., 0., 1., 0.], init_end_effector_pos,
-                                              init_end_effector_orn, end_effector_index, reset_finger_joints,
-                                              useOrientation, useNullSpace, np.array([-np.pi, 0., -np.pi / 2]),
-                                              np.array([0., 0., 1.]))
+        reset_finger_joints = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # TODO
+        super(Kinova2f85Robot, self).__init__(
+            physics_client,
+            "j2n6robotiq_2f_85.urdf",
+            urdfrootpath,
+            init_qpos,
+            [0.7, 0.5, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            init_end_effector_pos,
+            init_end_effector_orn,
+            end_effector_index,
+            reset_finger_joints,
+            useOrientation,
+            useNullSpace,
+            np.array([-np.pi, 0.0, -np.pi / 2]),
+            np.array([0.0, 0.0, 1.0]),
+        )
         self.gripper_joint_inds = [9, 11, 13, 14, 16, 18]
 
     def get_observation(self):
-        end_effector_state = self.p.getLinkState(self._robot, self.end_effector_index, computeLinkVelocity=1)
-        end_effector_pos, end_effector_orn, _, _, _, _, end_effector_vl, end_effector_va = end_effector_state
+        end_effector_state = self.p.getLinkState(
+            self._robot, self.end_effector_index, computeLinkVelocity=1
+        )
+        (
+            end_effector_pos,
+            end_effector_orn,
+            _,
+            _,
+            _,
+            _,
+            end_effector_vl,
+            end_effector_va,
+        ) = end_effector_state
         end_effector_orn = self.p.getEulerFromQuaternion(end_effector_orn)
         gripper_states = self.p.getJointStates(self._robot, self.gripper_joint_inds)
         gripper_pos, gripper_vel, *_ = zip(*gripper_states)
-        return np.array(end_effector_pos), np.array(end_effector_orn), np.array(end_effector_vl), \
-               np.array(gripper_pos), np.array(gripper_vel)
+        return (
+            np.array(end_effector_pos),
+            np.array(end_effector_orn),
+            np.array(end_effector_vl),
+            np.array(gripper_pos),
+            np.array(gripper_vel),
+        )
 
     def compute_ik_information(self):
-        """ Finds the values for the IK solver. """
+        """Finds the values for the IK solver."""
         joint_information = list(
-            map(lambda i: self.p.getJointInfo(self._robot, i),
-                self.motorIndices))
+            map(lambda i: self.p.getJointInfo(self._robot, i), self.motorIndices)
+        )
         self.IKInfo = {}
-        assert all([len(joint_information[i]) == 17 for i in range(len(self.motorIndices))])
+        assert all(
+            [len(joint_information[i]) == 17 for i in range(len(self.motorIndices))]
+        )
         self.IKInfo["solver"] = 0
         self.IKInfo["jointDamping"] = [0.1] * len(self.motorIndices)
         self.IKInfo["lowerLimits"] = [info[8] for info in joint_information]
         self.IKInfo["upperLimits"] = [info[9] for info in joint_information]
         # TODO: tweak jointRange, resetPose?
         self.IKInfo["jointRanges"] = [50] * len(self.motorIndices)
-        self.IKInfo["restPoses"] = [-0.127, 4.234, 1.597, -0.150, 0.585, 2.860, 0., 0., 0., 0., 0., 0.]
+        self.IKInfo["restPoses"] = [
+            -0.127,
+            4.234,
+            1.597,
+            -0.150,
+            0.585,
+            2.860,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ]
 
     def gen_gripper_joint_command(self, ctrl):
-        return [0.4 * ctrl, -0.4 * ctrl, 0.4 * ctrl, 0.4 * ctrl, -0.4 * ctrl, 0.4 * ctrl]
+        return [
+            0.4 * ctrl,
+            -0.4 * ctrl,
+            0.4 * ctrl,
+            0.4 * ctrl,
+            -0.4 * ctrl,
+            0.4 * ctrl,
+        ]
 
     def position_control(self, tgt_joint_pos, position_gain=None):
         # TODO: not sure if position ctrl works for the gripper with passive joints
@@ -411,18 +631,67 @@ class Kinova2f85Robot(ArmRobot):
 
 
 class UR2f85Robot(ArmRobot):
-    def __init__(self, physics_client, urdfrootpath=UR_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(1.0, 0.3, 0.6), init_end_effector_orn=(0, -math.pi, math.pi/2),
-                 useOrientation=True, useNullSpace=True):
+    def __init__(
+        self,
+        physics_client,
+        urdfrootpath=UR_MODEL_DIR,
+        init_qpos=None,
+        init_end_effector_pos=(1.0, 0.3, 0.6),
+        init_end_effector_orn=(0, -math.pi, math.pi / 2),
+        useOrientation=True,
+        useNullSpace=True,
+    ):
         if init_qpos is None:
-            init_qpos = [0, -0.1524, -1.8001, 1.8446, -1.6143, -1.5707, -1.57, 0., 0., 0., 0.,  # Arm
-                         0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,      # Gripper
-                         0.]                                              # Base
-            init_qpos = [0, -2.596, -1.070, -2.019, -1.628, 1.581, -1.008, 0., 0., 0., 0.,
-                         0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-                         0.]
+            init_qpos = [
+                0,
+                -0.1524,
+                -1.8001,
+                1.8446,
+                -1.6143,
+                -1.5707,
+                -1.57,
+                0.0,
+                0.0,
+                0.0,
+                0.0,  # Arm
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,  # Gripper
+                0.0,
+            ]  # Base
+            init_qpos = [
+                0,
+                -2.596,
+                -1.070,
+                -2.019,
+                -1.628,
+                1.581,
+                -1.008,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+            ]
 
-        '''
+        """
         end_effector_index = 8  # TODO: 8: wrist_3_link-tool0_fixed_joint. 9: robotiq_coupler_joint. 10: robotiq_85_base_joint
         reset_finger_joints = [0.] * 6
         init_gripper_quat = np.array([0., 0.707, 0.707, 0.])
@@ -431,25 +700,51 @@ class UR2f85Robot(ArmRobot):
         # [0.6, 0.5, -0.1] works to put vertical blocks, but not for horizontal blocks
         # [0.6, 0.55, -0.1] works to put horizontal and vertical blocks
         self.ur5_kin = ikfastpy.PyKinematics()
-        '''
+        """
 
         end_effector_index = 7
-        reset_finger_joints = [0.] * 6
+        reset_finger_joints = [0.0] * 6
         import env.ur_kinematics.ikfastpy as ikfastpy
+
         self.ur5_kin = ikfastpy.PyKinematics()
-        init_gripper_quat = mat2quat(np.reshape(self.ur5_kin.forward([0., 0., 0., 0., 0., 0.]), [3, 4])[:, :3])
+        init_gripper_quat = mat2quat(
+            np.reshape(self.ur5_kin.forward([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]), [3, 4])[
+                :, :3
+            ]
+        )
         print("init gripper quat", init_gripper_quat)
-        topdown_quat = quat_mul(np.array([0., 0., -1., 0.]),
-                                      quat_mul(np.array([np.sin(-np.pi / 4), 0., 0., np.cos(-np.pi / 4)]),
-                                      init_gripper_quat))
+        topdown_quat = quat_mul(
+            np.array([0.0, 0.0, -1.0, 0.0]),
+            quat_mul(
+                np.array([np.sin(-np.pi / 4), 0.0, 0.0, np.cos(-np.pi / 4)]),
+                init_gripper_quat,
+            ),
+        )
         topdown = quat2euler(topdown_quat)  # TODO: has bug in quat2euler
-        print("topdown", topdown, euler2quat(topdown),
-              topdown_quat, quat2euler(topdown_quat))  # TODO: has bug either in euler2quat or in quat2euler
-        super(UR2f85Robot, self).__init__(physics_client, "ur5_robot_with_gripper.urdf", urdfrootpath, init_qpos,
-                                          [0.7, 0.6, 0.0], [0., 0., 0., 1.], init_end_effector_pos,
-                                          topdown, end_effector_index, reset_finger_joints,
-                                          useOrientation, useNullSpace, topdown,
-                                          np.array([0., 1., 0.]), init_gripper_quat)
+        print(
+            "topdown",
+            topdown,
+            euler2quat(topdown),
+            topdown_quat,
+            quat2euler(topdown_quat),
+        )  # TODO: has bug either in euler2quat or in quat2euler
+        super(UR2f85Robot, self).__init__(
+            physics_client,
+            "ur5_robot_with_gripper.urdf",
+            urdfrootpath,
+            init_qpos,
+            [0.7, 0.6, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+            init_end_effector_pos,
+            topdown,
+            end_effector_index,
+            reset_finger_joints,
+            useOrientation,
+            useNullSpace,
+            topdown,
+            np.array([0.0, 1.0, 0.0]),
+            init_gripper_quat,
+        )
         self.collision_pairs = set()
 
     def _post_gripper(self):
@@ -470,32 +765,57 @@ class UR2f85Robot(ArmRobot):
         # print("motor indices", self.motorIndices)  # [1, 2, 3, 4, 5, 6, 11, 13, 15, 16, 18, 20]
 
     def get_observation(self):
-        end_effector_state = self.p.getLinkState(self._robot, self.end_effector_index, computeLinkVelocity=1)
-        end_effector_pos, end_effector_orn, _, _, _, _, end_effector_vl, end_effector_va = end_effector_state
+        end_effector_state = self.p.getLinkState(
+            self._robot, self.end_effector_index, computeLinkVelocity=1
+        )
+        (
+            end_effector_pos,
+            end_effector_orn,
+            _,
+            _,
+            _,
+            _,
+            end_effector_vl,
+            end_effector_va,
+        ) = end_effector_state
         end_effector_orn = self.p.getEulerFromQuaternion(end_effector_orn)
         gripper_states = self.p.getJointStates(self._robot, self.gripper_joint_inds)
         gripper_pos, gripper_vel, *_ = zip(*gripper_states)
-        return np.array(end_effector_pos), np.array(end_effector_orn), np.array(end_effector_vl), \
-               np.array(gripper_pos), np.array(gripper_vel)
+        return (
+            np.array(end_effector_pos),
+            np.array(end_effector_orn),
+            np.array(end_effector_vl),
+            np.array(gripper_pos),
+            np.array(gripper_vel),
+        )
 
     def compute_ik_information(self):
-        """ Finds the values for the IK solver. """
+        """Finds the values for the IK solver."""
         joint_information = list(
-            map(lambda i: self.p.getJointInfo(self._robot, i),
-                self.motorIndices))
+            map(lambda i: self.p.getJointInfo(self._robot, i), self.motorIndices)
+        )
         self.IKInfo = {}
-        assert all([len(joint_information[i]) == 17 for i in range(len(self.motorIndices))])
+        assert all(
+            [len(joint_information[i]) == 17 for i in range(len(self.motorIndices))]
+        )
         self.IKInfo["solver"] = 0
         self.IKInfo["jointDamping"] = [0.1] * len(self.motorIndices)
         self.IKInfo["lowerLimits"] = [info[8] for info in joint_information]
         self.IKInfo["upperLimits"] = [info[9] for info in joint_information]
         # TODO: tweak jointRange, resetPose?
         self.IKInfo["jointRanges"] = [np.pi] * len(self.motorIndices)
-        self.IKInfo["restPoses"] = [0., -1.8, 0., 0., 0., 0.]  # TODO
+        self.IKInfo["restPoses"] = [0.0, -1.8, 0.0, 0.0, 0.0, 0.0]  # TODO
 
     def gen_gripper_joint_command(self, ctrl):
         # return [0.4 * ctrl]
-        return [0.4 * ctrl, -0.4 * ctrl, 0.4 * ctrl, 0.4 * ctrl, -0.4 * ctrl, 0.4 * ctrl]
+        return [
+            0.4 * ctrl,
+            -0.4 * ctrl,
+            0.4 * ctrl,
+            0.4 * ctrl,
+            -0.4 * ctrl,
+            0.4 * ctrl,
+        ]
 
     def fit_circular(self, joint_pose):
         joint_pose = np.array(joint_pose)
@@ -506,7 +826,7 @@ class UR2f85Robot(ArmRobot):
     def run_ik(self, pos, orn):
         # ikfastpy
         # rot = np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]])
-        rot = np.array([[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]])
+        rot = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
         delta_pos = np.reshape(np.asarray(pos) - self.base_pos, (3, 1))
         ik_pos = rot @ delta_pos
         ik_mat = rot @ quat2mat(orn)
@@ -519,33 +839,76 @@ class UR2f85Robot(ArmRobot):
         n = 0
 
         joint_pose = np.reshape(joint_pose, (n_solutions, 6))
-        info = {'is_success': n_solutions > 0}
+        info = {"is_success": n_solutions > 0}
         return joint_pose, info
 
 
 class XArm7Robot(ArmRobot):
-    def __init__(self, physics_client, urdfrootpath=XARM_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(0.8, 0.1, 0.2),#(1.0, 0.3, 0.6)
-                 useOrientation=True, useNullSpace=True):
+    def __init__(
+        self,
+        physics_client,
+        urdfrootpath=XARM_MODEL_DIR,
+        init_qpos=None,
+        init_end_effector_pos=(0.8, 0.1, 0.2),  # (1.0, 0.3, 0.6)
+        useOrientation=True,
+        useNullSpace=True,
+    ):
         if init_qpos is None:
             # init_qpos = [0, 0.0, 0.0786759, 0.0, 1.54692674, 0.0, 1.46825087, 0.,
             #              0, 0, 0., 0., 0., 0., 0., 0., 0]
-            init_qpos = [0, -np.pi / 2, 0.0, 0.0, 0., 0.0, 0.0, 0.,
-                         0, 0, 0., 0., 0., 0., 0., 0., 0]
+            init_qpos = [
+                0,
+                -np.pi / 2,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+            ]
         end_effector_index = 8
-        reset_finger_joints = [0.] * 6
+        reset_finger_joints = [0.0] * 6
         import env.ikfastpy.ikfastpy_free4 as ikfastpy_free4
         import env.ikfastpy.ikfastpy_free0 as ikfastpy_free0
+
         self.kin_free4 = ikfastpy_free4.PyKinematics()
         self.kin_free0 = ikfastpy_free0.PyKinematics()
-        init_gripper_quat = mat2quat(np.reshape(self.kin_free4.forward([0.] * self.kin_free4.getDOF()), [3, 4])[:, :3])
-        topdown_quat = quat_mul(np.array([0., 0., np.sin(np.pi / 4), np.cos(np.pi / 4)]), init_gripper_quat)
+        init_gripper_quat = mat2quat(
+            np.reshape(self.kin_free4.forward([0.0] * self.kin_free4.getDOF()), [3, 4])[
+                :, :3
+            ]
+        )
+        topdown_quat = quat_mul(
+            np.array([0.0, 0.0, np.sin(np.pi / 4), np.cos(np.pi / 4)]),
+            init_gripper_quat,
+        )
         topdown = quat2euler(topdown_quat)
-        super(XArm7Robot, self).__init__(physics_client, "xarm7_with_gripper.urdf", urdfrootpath, init_qpos,
-                                         [0.7, 0.6, 0.005], [0., 0., 0., 1.], init_end_effector_pos,
-                                         topdown, end_effector_index, reset_finger_joints,
-                                         useOrientation, useNullSpace, topdown,
-                                         np.array([0., 0., -1.]), init_gripper_quat)
+        super(XArm7Robot, self).__init__(
+            physics_client,
+            "xarm7_with_gripper.urdf",
+            urdfrootpath,
+            init_qpos,
+            [0.7, 0.6, 0.005],
+            [0.0, 0.0, 0.0, 1.0],
+            init_end_effector_pos,
+            topdown,
+            end_effector_index,
+            reset_finger_joints,
+            useOrientation,
+            useNullSpace,
+            topdown,
+            np.array([0.0, 0.0, -1.0]),
+            init_gripper_quat,
+        )
         # physics_client.resetBasePositionAndOrientation(self._robot, [0.7, -1.0, 0.005], [0., 0., 0., 1.])
         self.collision_pairs = set()
 
@@ -555,13 +918,29 @@ class XArm7Robot(ArmRobot):
         self.motorIndices.extend(self.gripper_joint_inds)
 
     def get_observation(self):
-        end_effector_state = self.p.getLinkState(self._robot, self.end_effector_index, computeLinkVelocity=1)
-        end_effector_pos, end_effector_orn, _, _, _, _, end_effector_vl, end_effector_va = end_effector_state
+        end_effector_state = self.p.getLinkState(
+            self._robot, self.end_effector_index, computeLinkVelocity=1
+        )
+        (
+            end_effector_pos,
+            end_effector_orn,
+            _,
+            _,
+            _,
+            _,
+            end_effector_vl,
+            end_effector_va,
+        ) = end_effector_state
         end_effector_orn = self.p.getEulerFromQuaternion(end_effector_orn)
         gripper_states = self.p.getJointStates(self._robot, self.gripper_joint_inds)
         gripper_pos, gripper_vel, *_ = zip(*gripper_states)
-        return np.array(end_effector_pos), np.array(end_effector_orn), np.array(end_effector_vl), \
-               np.array(gripper_pos), np.array(gripper_vel)
+        return (
+            np.array(end_effector_pos),
+            np.array(end_effector_orn),
+            np.array(end_effector_vl),
+            np.array(gripper_pos),
+            np.array(gripper_vel),
+        )
 
     def gen_gripper_joint_command(self, ctrl):
         return 0.3 * ctrl * np.array(self.gripper_multipliers)
@@ -570,52 +949,82 @@ class XArm7Robot(ArmRobot):
         ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
         ik_mat = quat2mat(orn)
         ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
-        joint_poses = self.kin_free4.inverse(ee_pose.reshape(-1)) + self.kin_free0.inverse(ee_pose.reshape(-1))
+        joint_poses = self.kin_free4.inverse(
+            ee_pose.reshape(-1)
+        ) + self.kin_free0.inverse(ee_pose.reshape(-1))
         n_solutions = len(joint_poses) // self.kin_free4.getDOF()
-        joint_poses = np.array(joint_poses).reshape(n_solutions, self.kin_free4.getDOF()).tolist()
+        joint_poses = (
+            np.array(joint_poses).reshape(n_solutions, self.kin_free4.getDOF()).tolist()
+        )
         if n_solutions > 0:
-            joint_poses = list(filter(lambda conf: np.all(conf > np.array(self.joint_ll) - 1e-3) and
-                                                   np.all(conf < np.array(self.joint_ul) + 1e-3), joint_poses))
+            joint_poses = list(
+                filter(
+                    lambda conf: np.all(conf > np.array(self.joint_ll) - 1e-3)
+                    and np.all(conf < np.array(self.joint_ul) + 1e-3),
+                    joint_poses,
+                )
+            )
             n_solutions = len(joint_poses)
-        return np.array(joint_poses), {'is_success': n_solutions > 0}
-from scipy.spatial.transform import Rotation as R
+        return np.array(joint_poses), {"is_success": n_solutions > 0}
+
 
 class LHRobot(ArmRobot):
-    def __init__(self, physics_client, urdfrootpath=LH_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(1.0, 0.6, 0.2),
-                 useOrientation=True, useNullSpace=True):
-        
+    def __init__(
+        self,
+        physics_client,
+        urdfrootpath=LH_MODEL_DIR,
+        init_qpos=None,
+        init_end_effector_pos=(1.0, 0.6, 0.5),  # 底座坐标为：[0.7, 0.6, 0.005]
+        useOrientation=True,
+        useNullSpace=True,
+    ):
+
         if init_qpos is None:
-            init_qpos = [0, -np.pi / 2, 0, 0, 0, 0, 0, 0, 0,
-                         0, 0, 0, 0, 0, 0]
-        
+            init_qpos = [0, -np.pi / 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
         end_effector_index = 7
-        reset_finger_joints = [0.] * 6
+        reset_finger_joints = [0.0] * 6
 
         # # 导入 IKFast 求解器
         import env.ikfastpy.LH_ikFast as LH_ikFast
+
         self.lh_kin = LH_ikFast.PyKinematics()
 
         # 计算初始夹爪姿态（简化版本）
         init_gripper_quat = mat2quat(
-            np.reshape(self.lh_kin.forward([0., 0., 0., 0., 0., 0.]), [3, 4])[:, :3]
+            np.reshape(self.lh_kin.forward([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]), [3, 4])[
+                :, :3
+            ]
         )
-        
-        topdown_quat = quat_mul(np.array([0, np.sin(-np.pi / 4), 0., np.cos(np.pi / 4)]), 
-                       init_gripper_quat)
-        # topdown_quat = quat_mul(np.array([0, 0, np.sin(np.pi / 4), np.cos(np.pi / 4)]), 
+
+        topdown_quat = quat_mul(
+            np.array([0, np.sin(-np.pi / 4), 0.0, np.cos(np.pi / 4)]), init_gripper_quat
+        )
+        # topdown_quat = quat_mul(np.array([0, 0, np.sin(np.pi / 4), np.cos(np.pi / 4)]),
         #                init_gripper_quat)
         init_gripper_euler = quat2euler(topdown_quat)
 
-        self.base_orn = [0., 0., 1., 0.]  # 四元数表示绕Z轴180度旋转
+        self.base_orn = [0.0, 0.0, 1.0, 0.0]  # 四元数表示绕Z轴180度旋转
         # self.base_orn = [0., 0., 0., 1.]
-        super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,
-                                          [0.85, 0.6, 0.0], self.base_orn, init_end_effector_pos,
-                                          init_gripper_euler, end_effector_index, reset_finger_joints,
-                                          useOrientation, useNullSpace, init_gripper_euler,
-                                          np.array([0., 0., -1.]), init_gripper_quat)
+        super(LHRobot, self).__init__(
+            physics_client,
+            "LingHouUrdf3.urdf",
+            urdfrootpath,
+            init_qpos,
+            [0.7, 0.6, 0.005],
+            self.base_orn,
+            init_end_effector_pos,
+            init_gripper_euler,
+            end_effector_index,
+            reset_finger_joints,
+            useOrientation,
+            useNullSpace,
+            init_gripper_euler,
+            np.array([0.0, 0.0, -1.0]),
+            init_gripper_quat,
+        )
 
-        #抓取积木时适应不同情况版本
+        # 抓取积木时适应不同情况版本
         # super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,
         #                                   [0.7, 0.6, 0.0], self.base_orn, init_end_effector_pos,
         #                                   init_gripper_euler, end_effector_index, reset_finger_joints,
@@ -624,60 +1033,80 @@ class LHRobot(ArmRobot):
 
         self.collision_pairs = set()
         # self.test_z_offset()
+
     def _post_gripper(self):
         # 设置夹爪关节索引
         self.gripper_joint_inds = [8, 9, 10, 11, 12, 13]
         self.gripper_multipliers = [1, 1, 1, 1, 1, 1]
         self.motorIndices.extend(self.gripper_joint_inds)
 
-    def get_observation(self):  
-        end_effector_state = self.p.getLinkState(self._robot, self.end_effector_index, computeLinkVelocity=1)  
-        end_effector_pos, end_effector_orn, _, _, _, _, end_effector_vl, end_effector_va = end_effector_state  
-        end_effector_orn = self.p.getEulerFromQuaternion(end_effector_orn)  
-        gripper_states = self.p.getJointStates(self._robot, self.gripper_joint_inds)  
-        gripper_pos, gripper_vel, *_ = zip(*gripper_states)  
-        return np.array(end_effector_pos), np.array(end_effector_orn), np.array(end_effector_vl), np.array(gripper_pos), np.array(gripper_vel)  
-  
+    def get_observation(self):
+        end_effector_state = self.p.getLinkState(
+            self._robot, self.end_effector_index, computeLinkVelocity=1
+        )
+        (
+            end_effector_pos,
+            end_effector_orn,
+            _,
+            _,
+            _,
+            _,
+            end_effector_vl,
+            end_effector_va,
+        ) = end_effector_state
+        end_effector_orn = self.p.getEulerFromQuaternion(end_effector_orn)
+        gripper_states = self.p.getJointStates(self._robot, self.gripper_joint_inds)
+        gripper_pos, gripper_vel, *_ = zip(*gripper_states)
+        return (
+            np.array(end_effector_pos),
+            np.array(end_effector_orn),
+            np.array(end_effector_vl),
+            np.array(gripper_pos),
+            np.array(gripper_vel),
+        )
+
     def gen_gripper_joint_command(self, ctrl):
         """与 xArm 相同的夹爪控制逻辑"""
         return 0.3 * ctrl * np.array(self.gripper_multipliers)
-  
+
     def run_ik(self, pos, orn):
         """使用 IKFast 求解器"""
         # 获取基座旋转矩阵
         print(f"pos=========:{pos}")
         base_rot_mat = quat2mat(self.base_orn)
-        # 坐标变换（包含旋转）  
+        # 坐标变换（包含旋转）
         ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
         ik_pos = base_rot_mat.T @ ik_pos  # 添加基座旋转的逆变换
         ik_mat = quat2mat(orn)
-        
+
         ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
-        
+
         # 调用 IKFast 求解
         joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
         print(f"[DEBUG] IK 返回长度: {len(joint_pose)}")
-          
+
         # 处理多个解
         n_solutions = len(joint_pose) // 6
         joint_pose = np.reshape(joint_pose, (n_solutions, 6))
-          
+
         # 过滤超出关节限制的解
         valid_solutions = []
         for solution in joint_pose:
-            if np.all(solution > np.array(self.joint_ll) - 1e-3) and \
-               np.all(solution < np.array(self.joint_ul) + 1e-3):
+            if np.all(solution > np.array(self.joint_ll) - 1e-3) and np.all(
+                solution < np.array(self.joint_ul) + 1e-3
+            ):
                 valid_solutions.append(solution)
-        
-        return np.array(valid_solutions), {'is_success': len(valid_solutions) > 0}
+
+        return np.array(valid_solutions), {"is_success": len(valid_solutions) > 0}
 
 
 if __name__ == "__main__":
     import pybullet as p
     import pybullet_utils.bullet_client as bc
+
     # import env.ur_kinematics.ikfastpy as ikfastpy
     physics_client = bc.BulletClient(connection_mode=p.GUI)
-    physics_client.resetDebugVisualizerCamera(1.5, 90, -30, [0.6, 0.55, 0.])
+    physics_client.resetDebugVisualizerCamera(1.5, 90, -30, [0.6, 0.55, 0.0])
     # robot = UR2f85Robot(physics_client)
     # print(robot.get_base())
     # jointPoses = np.random.uniform(-np.pi, np.pi, size=6)
@@ -693,7 +1122,16 @@ if __name__ == "__main__":
     # ee_pose = np.asarray(ee_pose).reshape((3, 4))
     # print("ee pose", ee_pose[:, :3], ee_pose[:, -1])
 
-    ee_pose = ur5_kin.forward([-1.92452457e-01, -2.06325442e+00, 2.01537482e+00, -1.52291262e+00, -1.57102464e+00, -1.76289417e+00])
+    ee_pose = ur5_kin.forward(
+        [
+            -1.92452457e-01,
+            -2.06325442e00,
+            2.01537482e00,
+            -1.52291262e00,
+            -1.57102464e00,
+            -1.76289417e00,
+        ]
+    )
     ee_pose = np.asarray(ee_pose).reshape((3, 4))
     print(ee_pose)
     joint_poses = ur5_kin.inverse(ee_pose.reshape(-1).tolist())
