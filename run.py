@@ -16,7 +16,11 @@ def main(args):
     log_dir = args.log_path if args.log_path is not None else "/tmp/stable_baselines_" + time.strftime('%Y-%m-%d-%H-%M-%S')
     configure_logger(log_dir)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print("Device:", device)
+    print(f"[DEVICE_DEBUG] 使用设备: {device}")  
+    print(f"[DEVICE_DEBUG] CUDA可用: {torch.cuda.is_available()}")  
+    if torch.cuda.is_available():  
+        print(f"[DEVICE_DEBUG] GPU数量: {torch.cuda.device_count()}")  
+        print(f"[DEVICE_DEBUG] 当前GPU: {torch.cuda.get_device_name(0)}")
     # Make env
     env_kwargs = get_env_kwargs(args.env_id, args.horizon, args.random_size, args.min_num_blocks, args.discrete_height,
                                 args.random_mode, args.action_scale, args.restart_rate, args.noop, args.robot,

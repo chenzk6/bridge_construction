@@ -13,3 +13,5 @@ logs/pre_train/*.pt
 low_level_paths.pkl
 logs/pre_train/log.txt
 test*.py
+tmp5a4a8026-8e5b-4122-a493-a601a8b29ee0.bullet
+.gitignore

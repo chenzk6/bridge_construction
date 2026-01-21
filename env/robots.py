@@ -567,7 +567,6 @@ class XArm7Robot(ArmRobot):
         return 0.3 * ctrl * np.array(self.gripper_multipliers)
 
     def run_ik(self, pos, orn):
-        print(f"pos--------{pos}")
         ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
         ik_mat = quat2mat(orn)
         ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
@@ -582,23 +581,6 @@ class XArm7Robot(ArmRobot):
 from scipy.spatial.transform import Rotation as R
 
 class LHRobot(ArmRobot):
-    def test_z_offset(self):  
-        """测试Z轴偏移"""  
-        # 测试零位  
-        zero_joints = [0., 0., 0., 0., 0., 0.]  
-        
-        # IKFast正向运动学  
-        fk_result = self.lh_kin.forward(zero_joints)  
-        fk_pos = np.array(fk_result[3::4])  # 提取Z坐标  
-        
-        # PyBullet正向运动学  
-        for i, joint in enumerate(zero_joints):  
-            self.p.resetJointState(self._robot, self.motorIndices[i], joint)  
-        pb_pos = np.array(self.get_end_effector_pos())  
-        
-        print(f"IKFast Z: {fk_pos[2]:.6f}")  
-        print(f"PyBullet Z: {pb_pos[2]:.6f}")  
-        print(f"Z轴差异: {(fk_pos[2] - pb_pos[2]):.6f}")
     def __init__(self, physics_client, urdfrootpath=LH_MODEL_DIR, init_qpos=None,
                  init_end_effector_pos=(1.0, 0.6, 0.2),
                  useOrientation=True, useNullSpace=True):
@@ -610,46 +592,36 @@ class LHRobot(ArmRobot):
         end_effector_index = 7
         reset_finger_joints = [0.] * 6
 
-        # 导入 IKFast 求解器
+        # # 导入 IKFast 求解器
         import env.ikfastpy.LH_ikFast as LH_ikFast
         self.lh_kin = LH_ikFast.PyKinematics()
 
-        # ===== 新增：定义 IKFast 到 PyBullet 的坐标系转换 =====
-        # 从 verify_fk 得知：R_pb = R_ikfast @ C (其中 C ≈ Ry(-90°))
-        self.C_ik2pb = np.array([
-            [0.0, 0.0, -1.0],
-            [0.0, 1.0,  0.0],
-            [1.0, 0.0,  0.0],
-        ])
-        
-        # 计算初始夹爪姿态
-        fk_zero = self.lh_kin.forward([0., 0., 0., 0., 0., 0.])
-        R_ik_zero = np.reshape(fk_zero, [3, 4])[:, :3]
-        # 转换到 PyBullet 坐标系
-        R_pb_zero = R_ik_zero @ self.C_ik2pb
-        init_gripper_quat = mat2quat(R_pb_zero)
-
-        # # 计算初始夹爪姿态（简化版本）
-        # init_gripper_quat = mat2quat(
-        #     np.reshape(self.lh_kin.forward([0., 0., 0., 0., 0., 0.]), [3, 4])[:, :3]
-        # )
+        # 计算初始夹爪姿态（简化版本）
+        init_gripper_quat = mat2quat(
+            np.reshape(self.lh_kin.forward([0., 0., 0., 0., 0., 0.]), [3, 4])[:, :3]
+        )
         
         topdown_quat = quat_mul(np.array([0, np.sin(-np.pi / 4), 0., np.cos(np.pi / 4)]), 
                        init_gripper_quat)
+        # topdown_quat = quat_mul(np.array([0, 0, np.sin(np.pi / 4), np.cos(np.pi / 4)]), 
+        #                init_gripper_quat)
         init_gripper_euler = quat2euler(topdown_quat)
 
         self.base_orn = [0., 0., 1., 0.]  # 四元数表示绕Z轴180度旋转
+        # self.base_orn = [0., 0., 0., 1.]
+        super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,
+                                          [0.85, 0.6, 0.0], self.base_orn, init_end_effector_pos,
+                                          init_gripper_euler, end_effector_index, reset_finger_joints,
+                                          useOrientation, useNullSpace, init_gripper_euler,
+                                          np.array([0., 0., -1.]), init_gripper_quat)
+
+        #抓取积木时适应不同情况版本
         # super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,
         #                                   [0.7, 0.6, 0.0], self.base_orn, init_end_effector_pos,
         #                                   init_gripper_euler, end_effector_index, reset_finger_joints,
-        #                                   useOrientation, useNullSpace)
+        #                                   useOrientation, useNullSpace, init_gripper_euler,
+        #                                   np.array([0., 1., 0.]), init_gripper_quat)
 
-        #抓取积木时适应不同情况版本
-        super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,
-                                          [0.7, 0.6, 0.0], self.base_orn, init_end_effector_pos,
-                                          init_gripper_euler, end_effector_index, reset_finger_joints,
-                                          useOrientation, useNullSpace, init_gripper_euler,
-                                          np.array([0., 1., 0.]), init_gripper_quat)
         self.collision_pairs = set()
         # self.test_z_offset()
     def _post_gripper(self):
@@ -677,28 +649,10 @@ class LHRobot(ArmRobot):
         base_rot_mat = quat2mat(self.base_orn)
         # 坐标变换（包含旋转）  
         ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
-        # print(f"ik_pos:{ik_pos}")
-        ik_pos[2] += 0.048  # 补偿z轴偏移
-        # print(f"ik_pos:{ik_pos}")
         ik_pos = base_rot_mat.T @ ik_pos  # 添加基座旋转的逆变换
-        # print(f"ik_pos:{ik_pos}")
         ik_mat = quat2mat(orn)
-        # print(f"ik_mat:{ik_mat}")
-        ik_mat = base_rot_mat.T @ ik_mat  # 姿态也需要变换
         
-
-
-        # Step 2: PyBullet 坐标系 -> IKFast 坐标系 (关键!)
-        ik_mat_for_ikfast = ik_mat @ self.C_ik2pb.T
-        # print(f"ik_mat_for_ikfast:{ik_mat_for_ikfast}")
-        # 构造 IKFast 输入
-        ee_pose = np.concatenate([ik_mat_for_ikfast, ik_pos], axis=-1)
-        # print(f"ee_pose:{ee_pose}")
-        # ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
-
-        # 调试输出
-        # print(f"[DEBUG] 目标位置: {pos}")
-        # print(f"[DEBUG] 相对位置: {ik_pos.T}")
+        ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
         
         # 调用 IKFast 求解
         joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
