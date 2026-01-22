@@ -57,7 +57,10 @@ def parse_cmd():
     parser.add_argument("--priority_decay", type=float, default=0.0)
     parser.add_argument("--clip_priority", action="store_true", default=False)
     parser.add_argument("--primitive", action="store_true", default=False)
-    parser.add_argument("--robot", choices=["ur", "xarm"], default="xarm")
+    # parser.add_argument("--robot", choices=["ur", "xarm"], default="xarm")
+
+    parser.add_argument('--robot', choices=['ur', 'xarm', 'lh'], default='lh')
+
     parser.add_argument("--force_scale", type=float, default=0, help="random force applied after releasing finger")
     parser.add_argument("--adaptive_primitive", action="store_true", default=False)
     args = parser.parse_args()

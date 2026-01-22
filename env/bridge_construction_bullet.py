@@ -11,9 +11,11 @@ import os, time
 from typing import List
 from collections import deque
 
+from env.bullet_rotations import quat2euler, quat_mul, euler2quat, quat2mat, is_rotation_mat, mat2quat
+
 
 BASIC_COLORS = [[1.0, 0, 0], [1, 1, 0], [0.2, 0.8, 0.8], [0.8, 0.2, 0.8], [0, 0, 0], [0.0, 0.0, 1.0], [0.5, 0.2, 0.0]]
-
+cliff_x_ = 1.2
 
 def _out_of_reach(object_pos, cliff0_center, cliff1_center, object_size, cliff_size, cos_theta=0):
     # Out of reach will happen at reset,
@@ -123,7 +125,7 @@ class PhysClientWrapper:
 
 class RobotGymBaseEnv(gym.Env):
     def __init__(self, actionRepeat=10, timestep=1./240, render=False, init_qpos=None,
-                 init_end_effector_pos=(1.0, 0.6, 0.4), init_end_effector_orn=(0, -np.pi, np.pi / 2),
+                 init_end_effector_pos=(0.9, 0.8, 0.4), init_end_effector_orn=(0, -np.pi, np.pi / 2),
                  useNullSpace=True, robot="ur"):
         self.actionRepeat = actionRepeat
         self.timestep = timestep
@@ -151,12 +153,15 @@ class RobotGymBaseEnv(gym.Env):
         self.p.setGravity(0, 0, -10)
         self.p.setPhysicsEngineParameter(enableFileCaching=0)
         if self._render:
-            self.p.resetDebugVisualizerCamera(1.5, -60, -25, [1.3, 0.6, 0.1])
+            self.p.resetDebugVisualizerCamera(1.5, -60, -25, [cliff_x_, 0.6, 0.1])
         if self.robot_name == "ur":
             from env.robots import UR2f85Robot
             self.robot = UR2f85Robot(self.p, init_qpos=self.init_qpos, init_end_effector_pos=self.init_end_effector_pos,
                                      init_end_effector_orn=self.init_end_effector_orn, useOrientation=True,
                                      useNullSpace=self.useNullSpace)
+        elif self.robot_name == "lh":  # 添加 lh 支持 
+            from env.robots import LHRobot 
+            self.robot = LHRobot(self.p)
         elif self.robot_name == "xarm":
             from env.robots import XArm7Robot
             self.robot = XArm7Robot(self.p)
@@ -187,7 +192,7 @@ class RobotGymBaseEnv(gym.Env):
 
     def render(self, mode='human', width=500, height=500):
         if mode == 'rgb_array':
-            view_matrix = self.p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[1.3, 0.6, 0.1],
+            view_matrix = self.p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[cliff_x_, 0.6, 0.1],
                                                                    distance=1.1,
                                                                    yaw=-60,
                                                                    pitch=-20,
@@ -288,8 +293,8 @@ class BulletBridgeConstructionLow(RobotGymBaseEnv):
         col_id = self.p.createCollisionShape(self.p.GEOM_BOX, halfExtents=[self._cliff_thickness, self._cliff_height, self._cliff_thickness])
         vis_id = self.p.createVisualShape(self.p.GEOM_BOX, halfExtents=[self._cliff_thickness, self._cliff_height, self._cliff_thickness])
         cliff_mass = 0  # in kg
-        self.body_cliff0 = self.p.createMultiBody(cliff_mass, col_id, vis_id, [1.3, 0.3, self._cliff_height], [0.707, 0., 0., 0.707])
-        self.body_cliff1 = self.p.createMultiBody(cliff_mass, col_id, vis_id, [1.3, 0.9, self._cliff_height], [0.707, 0., 0., 0.707])
+        self.body_cliff0 = self.p.createMultiBody(cliff_mass, col_id, vis_id, [cliff_x_, 0.3, self._cliff_height], [0.707, 0., 0., 0.707])
+        self.body_cliff1 = self.p.createMultiBody(cliff_mass, col_id, vis_id, [cliff_x_, 0.9, self._cliff_height], [0.707, 0., 0., 0.707])
         # Blocks
         self.all_collision_shapes = []
         self.all_visual_shapes = []
@@ -304,10 +309,21 @@ class BulletBridgeConstructionLow(RobotGymBaseEnv):
             )
         block_mass = 0.05
         self.body_blocks = []
-        self.block_reset_pos = [np.array([0.9 + 0.15 * i, 0.0, self._block_thickness]) for i in range(2)] + \
-                               [np.array([0.9 + 0.15 * (i - 2), 0.26, self._block_thickness]) for i in range(2, 4)] + \
-                               [np.array([0.9 + 0.15 * (i - 4), 0.94, self._block_thickness]) for i in range(4 ,6)] + \
-                               [np.array([0.9 + 0.15 * (i - 6), 1.2, self._block_thickness]) for i in range(6, 7)]
+        # self.block_reset_pos = [np.array([0.9 + 0.15 * i, 0.0, self._block_thickness]) for i in range(2)] + \
+        #                        [np.array([0.9 + 0.15 * (i - 2), 0.26, self._block_thickness]) for i in range(2, 4)] + \
+        #                        [np.array([0.9 + 0.15 * (i - 4), 0.94, self._block_thickness]) for i in range(4 ,6)] + \
+        #                        [np.array([0.9 + 0.15 * (i - 6), 1.2, self._block_thickness]) for i in range(6, 7)]
+                            
+        self.block_reset_pos = [np.array([0.9 + 0.12 * i, 0.1, self._block_thickness]) for i in range(2)] + \
+                               [np.array([0.9 + 0.12 * (i - 2), 0.36, self._block_thickness]) for i in range(2, 4)] + \
+                               [np.array([0.9 + 0.12 * (i - 4), 0.84, self._block_thickness]) for i in range(4 ,6)] + \
+                               [np.array([0.9 + 0.12 * (i - 6), 1.1, self._block_thickness]) for i in range(6, 7)]
+
+        # self.block_reset_pos = [np.array([0.9 + 0.15 * i, 0.1, self._block_thickness]) for i in range(2)] + \
+        #                        [np.array([0.9 + 0.15 * (i - 2), 0.36, self._block_thickness]) for i in range(2, 4)] + \
+        #                        [np.array([0.9 + 0.15 * (i - 4), 0.84, self._block_thickness]) for i in range(4 ,6)] + \
+        #                        [np.array([0.9 + 0.15 * (i - 6), 1.1, self._block_thickness]) for i in range(6, 7)]
+
         self.block_reset_orn = [np.array([0., 0., 0., 1.])] * self.num_blocks
         for i in range(self.num_blocks):
             self.body_blocks.append(
@@ -327,10 +343,10 @@ class BulletBridgeConstructionLow(RobotGymBaseEnv):
     def _reset_sim(self):
         self.robot.reset()
         self.p.resetBasePositionAndOrientation(
-            self.body_cliff0, [1.3, self.cliff0_center, self._cliff_height], [0.707, 0., 0., 0.707]
+            self.body_cliff0, [cliff_x_, self.cliff0_center, self._cliff_height], [0.707, 0., 0., 0.707]
         )
         self.p.resetBasePositionAndOrientation(
-            self.body_cliff1, [1.3, self.cliff1_center, self._cliff_height], [0.707, 0., 0., 0.707]
+            self.body_cliff1, [cliff_x_, self.cliff1_center, self._cliff_height], [0.707, 0., 0., 0.707]
         )
         self.p.stepSimulation()
         self.cliff0_boundary = self.cliff0_center + self._cliff_thickness
@@ -564,8 +580,10 @@ class BulletBridgeConstructionHigh(gym.Env):
             else:
                 _cliff_distance = np.random.uniform(cliff_min_distance, cliff_max_distance)
             _noise = np.random.uniform(-self.env.cliff_size[1], self.env.cliff_size[1])
-            cliff0_center = 0.6 - self.env.cliff_size[2] - _cliff_distance / 2 + _noise
-            cliff1_center = 0.6 + self.env.cliff_size[2] + _cliff_distance / 2 + _noise
+
+            workspace_center = 0.6  # 保持Y轴中心不变
+            cliff0_center = workspace_center - self.env.cliff_size[2] - _cliff_distance / 2 + _noise
+            cliff1_center = workspace_center + self.env.cliff_size[2] + _cliff_distance / 2 + _noise
 
             self.env.set_cliff_centers(cliff0_center, cliff1_center)
             self.env.reset()
@@ -576,6 +594,11 @@ class BulletBridgeConstructionHigh(gym.Env):
         return obs
 
     def _calculate_skyline(self):
+        # 添加机器人状态调试  
+        robot_state = self.env.p.getLinkState(self.env.robot._robot, self.env.robot.end_effector_index)
+        robot_pos, robot_orn = robot_state[0], robot_state[1]
+        print(f"[SKYLINE_DEBUG] 机器人末端位置: {robot_pos}")
+
         # TODO: we must make sure the robot arm does not conflict with skyline detection
         if self.env.random_size:
             num_ray = int(round((self.env.cliff1_boundary - self.env.cliff0_boundary) / 0.02))
@@ -587,7 +610,7 @@ class BulletBridgeConstructionHigh(gym.Env):
         collision_id_buf = []
         ray_array = np.array([0., 0., -1.])
         for ray_idx in range(num_ray):
-            start_point = np.array([1.3,
+            start_point = np.array([cliff_x_,
                                     self.env.cliff0_boundary - 1e-3 + (
                                                 self.env.cliff1_boundary - self.env.cliff0_boundary + 2e-3) / (
                                             num_ray - 1) * ray_idx, 1.0])
@@ -691,9 +714,9 @@ class BulletBridgeConstructionHigh(gym.Env):
 
     def get_cliff_pos(self, index: int):
         if index == 0:
-            return np.array([1.3, self.env.cliff0_center, self.env.cliff_size[1]])
+            return np.array([cliff_x_, self.env.cliff0_center, self.env.cliff_size[1]])
         if index == 1:
-            return np.array([1.3, self.env.cliff1_center, self.env.cliff_size[1]])
+            return np.array([cliff_x_, self.env.cliff1_center, self.env.cliff_size[1]])
         raise RuntimeError
 
     def get_block_reset_pos(self, index: int):
@@ -723,11 +746,11 @@ class BulletBridgeConstructionHigh(gym.Env):
             for j in range(len(servo_angles)):
                 self.env.p.resetJointState(self.env.robot._robot, self.env.robot.motorIndices[j], servo_angles[j])
         self.env.p.resetBasePositionAndOrientation(
-            self.env.body_cliff0, np.array([1.3, cliff0_center, self.env._cliff_height]),
+            self.env.body_cliff0, np.array([cliff_x_, cliff0_center, self.env._cliff_height]),
             np.array([0.707, 0, 0, 0.707])
         )
         self.env.p.resetBasePositionAndOrientation(
-            self.env.body_cliff1, np.array([1.3, cliff1_center, self.env._cliff_height]),
+            self.env.body_cliff1, np.array([cliff_x_, cliff1_center, self.env._cliff_height]),
             np.array([0.707, 0., 0., 0.707])
         )
         cur_num_blocks = len(obj_poses)
@@ -758,24 +781,42 @@ class BulletBridgeConstructionHigh(gym.Env):
             assert 0 <= idx < self.env.cur_num_blocks
 
         if idx >= 0:
-            y_pos = 0.6
+            # 基于新机械臂位置调整目标位置
+            y_pos = 0.6  # 基于机械臂基座y=0.6
+            x_pos = cliff_x_  # 确保在0.56米工作半径内
             z_scale = self.env._cliff_height if self.narrow_z else self.action_scale
             if self.action_2d:
-                target_pos = np.array([1.3, y_pos + action[1] * self.action_scale, 2 * self.env._cliff_height + action[2] * z_scale])
+                target_pos = np.array([x_pos, y_pos + action[1] * self.action_scale, 2 * self.env._cliff_height + action[2] * z_scale])
                 _theta_div_pi = (self.rotation_range[1] - self.rotation_range[0]) / (2 * np.pi) * action[3] \
                                 + (self.rotation_range[0] + self.rotation_range[1]) / (2 * np.pi)
-                target_orn = np.concatenate([[0., 0.], [_theta_div_pi]])  # theta/pi
+                target_orn = np.concatenate([[0., 0.], [_theta_div_pi]])
             else:
-                target_pos = action[1: 4] * self.action_scale + np.array([1.3, y_pos, 2 * self.env._cliff_height])
-                target_pos[0] = 1.3
-                target_orn = action[4: 7]  # (alpha/pi, beta/pi, theta/pi)
+                target_pos = action[1: 4] * self.action_scale + np.array([x_pos, y_pos, 2 * self.env._cliff_height])
+                target_pos[0] = x_pos
+                target_orn = action[4: 7]
                 target_orn[0: 2] = 0.
             out_of_reach = False
-            if _out_of_reach(target_pos, self.get_cliff_pos(0), self.get_cliff_pos(1), self.env.block_size[idx],
-                             self.env.cliff_size, cos_theta=abs(np.cos(target_orn[2] * np.pi))):
-                target_pos = self.get_block_reset_pos(idx)
-                target_orn = np.array([0., 0., 0.])
-                out_of_reach = True
+            # if _out_of_reach(target_pos, self.get_cliff_pos(0), self.get_cliff_pos(1), self.env.block_size[idx],
+            #                 self.env.cliff_size, cos_theta=abs(np.cos(target_orn[2] * np.pi))):
+            #     target_pos = self.get_block_reset_pos(idx)
+            #     target_orn = np.array([0., 0., 0.])
+            #     out_of_reach = True
+
+            # 在计算目标位置后添加调试
+            # print(f"[ENV_DEBUG] 动作转换:")  
+            # print(f"  原始动作: {action}")  
+            # print(f"  选中物体: {idx}")  
+            print(f"  目标位置: {target_pos}")  
+            # print(f"  目标姿态: {target_orn}")  
+            # print(f"  是否超出范围: {out_of_reach}")  
+            if out_of_reach:  
+                print(f"[ENV_DEBUG] 位置超出范围，重置为: {self.get_block_reset_pos(idx)}")
+            
+            # if self.env.robot_name == "lh":
+            #     # ✅ 应用逆转换,让策略输出的简单坐标能正确执行
+            #     target_pos = self._compensate_lh_transform(target_pos)
+            #     print(f"  转换后目标位置: {target_pos}")
+            
             return idx, target_pos, target_orn, out_of_reach
         return None
 

@@ -40,12 +40,13 @@ def evaluate(eval_env: VecPyTorch, policy, device, n_episode, n_obj, render=Fals
                 eval_masks,
                 deterministic=False)
 
-        print(eval_env.get_attr("step_counter")[0], action.numpy()[0])
+        print(eval_env.get_attr("step_counter")[0], action.cpu().numpy()[0])
+        print(eval_env.get_attr("step_counter")[0], action.cpu().numpy()[0])
         img = eval_env.get_images()[0]
         ax.cla()
         ax.text(text_x, text_y, "Episode %d, Step %d, Value %.3f" % (len(eval_episode_rewards),
                                                                      eval_env.get_attr("step_counter")[0],
-                                                                     value.squeeze(dim=0)[0].numpy()),
+                                                                     value.squeeze(dim=0)[0].cpu().numpy()),
                 horizontalalignment='center', verticalalignment='center')
         ax.imshow(img)
         if render:
@@ -82,7 +83,7 @@ def evaluate(eval_env: VecPyTorch, policy, device, n_episode, n_obj, render=Fals
                 ax.text(text_x, text_y,
                         "Episode %d, Step %d, Value %.3f" % (len(eval_episode_rewards),
                                                              eval_env.get_attr("step_counter")[0],
-                                                             value.squeeze(dim=0)[0].numpy()),
+                                                             value.squeeze(dim=0)[0].cpu().numpy()),
                         horizontalalignment='center', verticalalignment='center')
                 ax.imshow(img)
                 if render:
@@ -148,13 +149,13 @@ def evaluate_fixed_scene(eval_env, initial_positions, object_sizes, cliff0_cente
                 eval_recurrent_hidden_states,
                 eval_masks,
                 deterministic=False)
-        print(eval_env.get_attr("step_counter")[0], action.numpy()[0])
-        action_seqs.append(action.numpy()[0])
+        print(eval_env.get_attr("step_counter")[0], action.cpu().numpy()[0])
+        action_seqs.append(action.cpu().numpy()[0])
         img = eval_env.get_images()[0]
         ax.cla()
         ax.text(text_x, text_y, "Episode %d, Step %d, Value %.3f" % (0,
                                                                      eval_env.get_attr("step_counter")[0],
-                                                                     value.squeeze(dim=0)[0].numpy()),
+                                                                     value.squeeze(dim=0)[0].cpu().numpy()),
                 horizontalalignment='center', verticalalignment='center')
         ax.imshow(img)
         plt.axis("off")

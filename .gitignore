@@ -4,3 +4,14 @@
 __pycache__
 *.mp4
 trained_models/
+logs/lh_train/*.csv
+logs/pre_train/*.csv
+logs/lh_train/*.pt
+tmp/
+logs/lh_train/log.txt
+logs/pre_train/*.pt
+low_level_paths.pkl
+logs/pre_train/log.txt
+test*.py
+tmp5a4a8026-8e5b-4122-a493-a601a8b29ee0.bullet
+.gitignore
