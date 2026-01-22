@@ -987,7 +987,7 @@ class LHRobot(ArmRobot):
     ):
 
         if init_qpos is None:
-            init_qpos = [0, -np.pi / 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            init_qpos = [0, -np.pi/4, -np.pi/4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         end_effector_index = 7
         reset_finger_joints = [0.0] * 6

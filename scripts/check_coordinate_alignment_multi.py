@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, '/home/xilifeng/bridge_construction')
 import numpy as np
 import pybullet as p
 import pybullet_utils.bullet_client as bc

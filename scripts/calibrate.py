@@ -1,4 +1,6 @@
 # 用于机器人坐标标定
+import sys
+sys.path.insert(0, '/home/xilifeng/bridge_construction')
 import numpy as np
 from scipy.spatial.transform import Rotation
 import pybullet as p
