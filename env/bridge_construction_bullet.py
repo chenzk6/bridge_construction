@@ -798,27 +798,9 @@ class BulletBridgeConstructionHigh(gym.Env):
                 target_orn = action[4: 7]
                 target_orn[0: 2] = 0.
             out_of_reach = False
-            # if _out_of_reach(target_pos, self.get_cliff_pos(0), self.get_cliff_pos(1), self.env.block_size[idx],
-            #                 self.env.cliff_size, cos_theta=abs(np.cos(target_orn[2] * np.pi))):
-            #     target_pos = self.get_block_reset_pos(idx)
-            #     target_orn = np.array([0., 0., 0.])
-            #     out_of_reach = True
-
-            # 在计算目标位置后添加调试
-            # print(f"[ENV_DEBUG] 动作转换:")  
-            # print(f"  原始动作: {action}")  
-            # print(f"  选中物体: {idx}")  
-            print(f"  目标位置: {target_pos}")  
-            # print(f"  目标姿态: {target_orn}")  
-            # print(f"  是否超出范围: {out_of_reach}")  
             if out_of_reach:  
-                print(f"[ENV_DEBUG] 位置超出范围，重置为: {self.get_block_reset_pos(idx)}")
-            
-            # if self.env.robot_name == "lh":
-            #     # ✅ 应用逆转换,让策略输出的简单坐标能正确执行
-            #     target_pos = self._compensate_lh_transform(target_pos)
-            #     print(f"  转换后目标位置: {target_pos}")
-            
+                if DEBUG:
+                    print(f"[ENV_DEBUG] 位置超出范围，重置为: {self.get_block_reset_pos(idx)}")
             return idx, target_pos, target_orn, out_of_reach
         return None
 
