@@ -1,14 +1,8 @@
 import os, time
 import math
 import numpy as np
-from env.bullet_rotations import (
-    quat2euler,
-    quat_mul,
-    euler2quat,
-    quat2mat,
-    is_rotation_mat,
-    mat2quat,
-)
+from env.bullet_rotations import quat2euler, quat_mul, euler2quat, quat2mat, is_rotation_mat, mat2quat
+from config import DEBUG
 
 
 KINOVA_MODEL_DIR = os.path.join(os.path.dirname(__file__), "kinova_description", "urdf")
@@ -54,13 +48,15 @@ class ArmRobot(object):
         actual_base_pos, actual_base_orn = self.p.getBasePositionAndOrientation(
             self._robot
         )
-        print(f"[调试] 期望基座位置: {base_pos}")
+        if DEBUG:
+            print(f"[调试] 期望基座位置: {base_pos}")
         self.base_pos = list(actual_base_pos)
         self.base_orn = list(actual_base_orn)
         self.init_qpos = init_qpos
-        print(f"[调试] 初始基座位置: {base_pos}")
-        print(f"[调试] 实际基座位置: {self.base_pos}")
-        print(f"[调试] 实际基座姿态: {self.base_orn}")
+        if DEBUG:
+            print(f"[调试] 初始基座位置: {base_pos}")
+            print(f"[调试] 实际基座位置: {self.base_pos}")
+            print(f"[调试] 实际基座姿态: {self.base_orn}")
         self.end_effector_index = end_effector_index
         self.motorNames = []
         self.motorIndices = []
@@ -113,7 +109,8 @@ class ArmRobot(object):
         )  # + np.concatenate([np.random.uniform(-0.15, 0.15, size=2), [0.]])
         # print('target endpos', target_endpos)
         jointPoses = self.run_ik(target_endpos, endEffectorOrn)[0]
-        print(f"IK 求解结果长度: {len(jointPoses)}")
+        if DEBUG:
+            print(f"IK 求解结果长度: {len(jointPoses)}")
         if len(np.array(jointPoses).shape) > 1:
             jointPoses = jointPoses[
                 np.argmin(
@@ -131,11 +128,12 @@ class ArmRobot(object):
             self.p.resetJointState(self._robot, self.motorIndices[i], jointPoses[i])
         self.p.stepSimulation()
 
-        actual_pos = self.get_end_effector_pos()
-        target_pos = np.asarray(self.endEffectorPos)
-        print(f"目标位置: {target_pos}")
-        print(f"实际位置: {actual_pos}")
-        print(f"位置误差: {np.linalg.norm(actual_pos - target_pos)}")
+        actual_pos = self.get_end_effector_pos()  
+        target_pos = np.asarray(self.endEffectorPos)  
+        if DEBUG:
+            print(f"目标位置: {target_pos}")  
+            print(f"实际位置: {actual_pos}")  
+            print(f"位置误差: {np.linalg.norm(actual_pos - target_pos)}")
         # print('after reset, endpos', self.get_end_effector_pos(), self.get_end_effector_orn(as_type="quat"), jointPoses)
         # for i in range(self.num_joints):
         #     print(i, self.p.getLinkState(self._robot, i))
