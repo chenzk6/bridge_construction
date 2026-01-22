@@ -981,7 +981,7 @@ class LHRobot(ArmRobot):
         physics_client,
         urdfrootpath=LH_MODEL_DIR,
         init_qpos=None,
-        init_end_effector_pos=(1.0, 0.6, 0.3),  # 底座坐标为：[0.7, 0.6, 0.005]
+        init_end_effector_pos=(0.7, 0.3, 0.3),  # 底座坐标为：[0.7, 0.6, 0.005]
         useOrientation=True,
         useNullSpace=True,
     ):
