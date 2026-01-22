@@ -51,7 +51,16 @@ class ArmRobot(object):
             base_orn,
             useFixedBase=1,
         )
+        actual_base_pos, actual_base_orn = self.p.getBasePositionAndOrientation(
+            self._robot
+        )
+        print(f"[调试] 期望基座位置: {base_pos}")
+        self.base_pos = list(actual_base_pos)
+        self.base_orn = list(actual_base_orn)
         self.init_qpos = init_qpos
+        print(f"[调试] 初始基座位置: {base_pos}")
+        print(f"[调试] 实际基座位置: {self.base_pos}")
+        print(f"[调试] 实际基座姿态: {self.base_orn}")
         self.end_effector_index = end_effector_index
         self.motorNames = []
         self.motorIndices = []
@@ -980,17 +989,15 @@ class LHRobot(ArmRobot):
     ):
 
         if init_qpos is None:
-            init_qpos = [0, -np.pi / 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            init_qpos = [0.0] * 18
 
         end_effector_index = 7
         reset_finger_joints = [0.0] * 6
 
-        # # 导入 IKFast 求解器
         import env.ikfastpy.LH_ikFast as LH_ikFast
 
         self.lh_kin = LH_ikFast.PyKinematics()
 
-        # 计算初始夹爪姿态（简化版本）
         init_gripper_quat = mat2quat(
             np.reshape(self.lh_kin.forward([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]), [3, 4])[
                 :, :3
@@ -998,41 +1005,35 @@ class LHRobot(ArmRobot):
         )
 
         topdown_quat = quat_mul(
-            np.array([0, np.sin(-np.pi / 4), 0.0, np.cos(np.pi / 4)]), init_gripper_quat
+            np.array([0, np.sin(-np.pi / 4), 0.0, np.cos(-np.pi / 4)]),  # 修正符号
+            init_gripper_quat,
         )
-        # topdown_quat = quat_mul(np.array([0, 0, np.sin(np.pi / 4), np.cos(np.pi / 4)]),
-        #                init_gripper_quat)
-        init_gripper_euler = quat2euler(topdown_quat)
 
-        self.base_orn = [0.0, 0.0, 1.0, 0.0]  # 四元数表示绕Z轴180度旋转
-        # self.base_orn = [0., 0., 0., 1.]
+        topdown = quat2euler(topdown_quat)
+
         super(LHRobot, self).__init__(
             physics_client,
             "LingHouUrdf3.urdf",
             urdfrootpath,
             init_qpos,
-            [0.7, 0.6, 0.005],
-            self.base_orn,
+            [0.75, 0.6, 0.005],
+            [0.0, 0.0, 1.0, 0.0],
             init_end_effector_pos,
-            init_gripper_euler,
+            topdown,
             end_effector_index,
             reset_finger_joints,
             useOrientation,
             useNullSpace,
-            init_gripper_euler,
+            topdown,
             np.array([0.0, 0.0, -1.0]),
             init_gripper_quat,
         )
 
-        # 抓取积木时适应不同情况版本
-        # super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,
-        #                                   [0.7, 0.6, 0.0], self.base_orn, init_end_effector_pos,
-        #                                   init_gripper_euler, end_effector_index, reset_finger_joints,
-        #                                   useOrientation, useNullSpace, init_gripper_euler,
-        #                                   np.array([0., 1., 0.]), init_gripper_quat)
-
         self.collision_pairs = set()
-        # self.test_z_offset()
+        self.gripper_multipliers = [1.0] * 6
+        self.ndof = 6
+        self.joint_ll = [-2.967, -2.495, -3.577, -3.49, -2.181, -6.283]
+        self.joint_ul = [2.967, 1.518, 0.925, 3.49, 2.181, 6.283]
 
     def _post_gripper(self):
         # 设置夹爪关节索引
@@ -1066,38 +1067,58 @@ class LHRobot(ArmRobot):
         )
 
     def gen_gripper_joint_command(self, ctrl):
-        """与 xArm 相同的夹爪控制逻辑"""
         return 0.3 * ctrl * np.array(self.gripper_multipliers)
 
     def run_ik(self, pos, orn):
-        """使用 IKFast 求解器"""
-        # 获取基座旋转矩阵
-        print(f"pos=========:{pos}")
-        base_rot_mat = quat2mat(self.base_orn)
-        # 坐标变换（包含旋转）
-        ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
-        ik_pos = base_rot_mat.T @ ik_pos  # 添加基座旋转的逆变换
-        ik_mat = quat2mat(orn)
+        # 将世界坐标系转换到基座坐标系
+        base_rot = quat2mat(self.base_orn)
 
-        ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
+        # 位置转换
+        delta_pos = np.array(pos) - np.array(self.base_pos)
+        ik_pos_base = base_rot.T @ delta_pos
 
-        # 调用 IKFast 求解
-        joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
-        print(f"[DEBUG] IK 返回长度: {len(joint_pose)}")
+        # 姿态转换
+        world_rot = quat2mat(orn)
+        ik_mat_base = base_rot.T @ world_rot
+
+        # 标定变换矩阵 (从 PyBullet 坐标系到 IKFast 坐标系)
+        # 这些值来自标定结果: ikfast = R @ pybullet + t
+        R_calib = np.array(
+            [
+                [0.9999934593404819, 0.0025752263036461776, -0.0025395837730413104],
+                [-0.0026141885588741405, 0.9998770711064439, -0.015459906008052015],
+                [0.0024994588282142368, 0.015466443840914224, 0.9998772633781016],
+            ]
+        )
+        t_calib = np.array(
+            [0.0006733054205857181, 0.009606285975404551, -0.006226559947067112]
+        )
+
+        # 应用标定变换
+        ik_pos_ikfast = R_calib @ ik_pos_base + t_calib
+        ik_mat_ikfast = R_calib @ ik_mat_base @ R_calib.T
+
+        ik_pos = np.reshape(ik_pos_ikfast, (3, 1))
+        ee_pose = np.concatenate([ik_mat_ikfast, ik_pos], axis=-1)
+
+        joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1))
 
         # 处理多个解
         n_solutions = len(joint_pose) // 6
-        joint_pose = np.reshape(joint_pose, (n_solutions, 6))
+        joint_pose = (np.array(joint_pose)).reshape(n_solutions, 6).tolist()
 
-        # 过滤超出关节限制的解
-        valid_solutions = []
-        for solution in joint_pose:
-            if np.all(solution > np.array(self.joint_ll) - 1e-3) and np.all(
-                solution < np.array(self.joint_ul) + 1e-3
-            ):
-                valid_solutions.append(solution)
+        if n_solutions > 0:
+            # 过滤超出关节限制的解
+            joint_pose = list(
+                filter(
+                    lambda conf: np.all(np.array(conf) > np.array(self.joint_ll) - 1e-3)
+                    and np.all(np.array(conf) < np.array(self.joint_ul) + 1e-3),
+                    joint_pose,
+                )
+            )
+            n_solutions = len(joint_pose)
 
-        return np.array(valid_solutions), {"is_success": len(valid_solutions) > 0}
+        return np.array(joint_pose), {"is_success": n_solutions > 0}
 
 
 if __name__ == "__main__":
