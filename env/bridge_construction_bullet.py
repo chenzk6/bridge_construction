@@ -12,6 +12,7 @@ from typing import List
 from collections import deque
 
 from env.bullet_rotations import quat2euler, quat_mul, euler2quat, quat2mat, is_rotation_mat, mat2quat
+from config import DEBUG
 
 
 BASIC_COLORS = [[1.0, 0, 0], [1, 1, 0], [0.2, 0.8, 0.8], [0.8, 0.2, 0.8], [0, 0, 0], [0.0, 0.0, 1.0], [0.5, 0.2, 0.0]]
@@ -594,10 +595,11 @@ class BulletBridgeConstructionHigh(gym.Env):
         return obs
 
     def _calculate_skyline(self):
-        # 添加机器人状态调试  
-        robot_state = self.env.p.getLinkState(self.env.robot._robot, self.env.robot.end_effector_index)
-        robot_pos, robot_orn = robot_state[0], robot_state[1]
-        print(f"[SKYLINE_DEBUG] 机器人末端位置: {robot_pos}")
+        if DEBUG:
+            # 添加机器人状态调试  
+            robot_state = self.env.p.getLinkState(self.env.robot._robot, self.env.robot.end_effector_index)
+            robot_pos, robot_orn = robot_state[0], robot_state[1]
+            print(f"[SKYLINE_DEBUG] 机器人末端位置: {robot_pos}")
 
         # TODO: we must make sure the robot arm does not conflict with skyline detection
         if self.env.random_size:
