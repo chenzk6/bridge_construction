@@ -1,14 +1,8 @@
 import os, time
 import math
 import numpy as np
-from env.bullet_rotations import (
-    quat2euler,
-    quat_mul,
-    euler2quat,
-    quat2mat,
-    is_rotation_mat,
-    mat2quat,
-)
+from env.bullet_rotations import quat2euler, quat_mul, euler2quat, quat2mat, is_rotation_mat, mat2quat
+from config import DEBUG
 
 
 KINOVA_MODEL_DIR = os.path.join(os.path.dirname(__file__), "kinova_description", "urdf")
@@ -104,7 +98,8 @@ class ArmRobot(object):
         )  # + np.concatenate([np.random.uniform(-0.15, 0.15, size=2), [0.]])
         # print('target endpos', target_endpos)
         jointPoses = self.run_ik(target_endpos, endEffectorOrn)[0]
-        print(f"IK 求解结果长度: {len(jointPoses)}")
+        if DEBUG:
+            print(f"IK 求解结果长度: {len(jointPoses)}")
         if len(np.array(jointPoses).shape) > 1:
             jointPoses = jointPoses[
                 np.argmin(
@@ -122,11 +117,12 @@ class ArmRobot(object):
             self.p.resetJointState(self._robot, self.motorIndices[i], jointPoses[i])
         self.p.stepSimulation()
 
-        actual_pos = self.get_end_effector_pos()
-        target_pos = np.asarray(self.endEffectorPos)
-        print(f"目标位置: {target_pos}")
-        print(f"实际位置: {actual_pos}")
-        print(f"位置误差: {np.linalg.norm(actual_pos - target_pos)}")
+        actual_pos = self.get_end_effector_pos()  
+        target_pos = np.asarray(self.endEffectorPos)  
+        if DEBUG:
+            print(f"目标位置: {target_pos}")  
+            print(f"实际位置: {actual_pos}")  
+            print(f"位置误差: {np.linalg.norm(actual_pos - target_pos)}")
         # print('after reset, endpos', self.get_end_effector_pos(), self.get_end_effector_orn(as_type="quat"), jointPoses)
         # for i in range(self.num_joints):
         #     print(i, self.p.getLinkState(self._robot, i))
@@ -1078,13 +1074,29 @@ class LHRobot(ArmRobot):
         ik_pos = np.reshape(np.array(pos) - self.base_pos, (3, 1))
         ik_pos = base_rot_mat.T @ ik_pos  # 添加基座旋转的逆变换
         ik_mat = quat2mat(orn)
+        
+        
+        # Step 2: PyBullet 坐标系 -> IKFast 坐标系 (关键!)
+        ik_mat_for_ikfast = ik_mat @ self.C_ik2pb.T
+        if DEBUG:
+            print(f"ik_mat_for_ikfast:{ik_mat_for_ikfast}")
+        # 构造 IKFast 输入
+        ee_pose = np.concatenate([ik_mat_for_ikfast, ik_pos], axis=-1)
+        # ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
+        # ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
 
-        ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
-
+        # 调试输出
+        if DEBUG:
+            print(f"[DEBUG] 目标位置: {pos}")
+            print(f"[DEBUG] 相对位置: {ik_pos.T}")
+            print(f"[DEBUG] 旋转矩阵:\n{ik_mat}")
+            print(f"[DEBUG] ee_pose: {ee_pose.reshape(-1)}")
+        
         # 调用 IKFast 求解
         joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
-        print(f"[DEBUG] IK 返回长度: {len(joint_pose)}")
-
+        if DEBUG:
+            print(f"[DEBUG] IK 返回长度: {len(joint_pose)}")
+          
         # 处理多个解
         n_solutions = len(joint_pose) // 6
         joint_pose = np.reshape(joint_pose, (n_solutions, 6))
