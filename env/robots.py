@@ -856,7 +856,7 @@ class XArm7Robot(ArmRobot):
         physics_client,
         urdfrootpath=XARM_MODEL_DIR,
         init_qpos=None,
-        init_end_effector_pos=(0.8, 0.1, 0.2),  # (1.0, 0.3, 0.6)
+        init_end_effector_pos=(0.8, 0.1, 0.2),
         useOrientation=True,
         useNullSpace=True,
     ):
@@ -987,7 +987,7 @@ class LHRobot(ArmRobot):
     ):
 
         if init_qpos is None:
-            init_qpos = [0.0] * 18
+            init_qpos = [0, -np.pi / 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         end_effector_index = 7
         reset_finger_joints = [0.0] * 6
@@ -1081,16 +1081,12 @@ class LHRobot(ArmRobot):
 
         # 标定变换矩阵 (从 PyBullet 坐标系到 IKFast 坐标系)
         # 这些值来自标定结果: ikfast = R @ pybullet + t
-        R_calib = np.array(
-            [
-                [0.9999934593404819, 0.0025752263036461776, -0.0025395837730413104],
-                [-0.0026141885588741405, 0.9998770711064439, -0.015459906008052015],
-                [0.0024994588282142368, 0.015466443840914224, 0.9998772633781016],
-            ]
-        )
-        t_calib = np.array(
-            [0.0006733054205857181, 0.009606285975404551, -0.006226559947067112]
-        )
+        R_calib = np.array([
+            [0.9999999988269757, -9.545727745298391e-06, 4.7486086151400804e-05],
+            [9.543846484108753e-06, 0.9999999991696978, 3.961717492014819e-05],
+            [-4.748646428675933e-05, -3.96167216734827e-05, 0.9999999980877761],
+        ])
+        t_calib = np.array([-4.3207413489537716e-05, -2.1138767030016298e-05, 4.063295956546753e-05])
 
         # 应用标定变换
         ik_pos_ikfast = R_calib @ ik_pos_base + t_calib
