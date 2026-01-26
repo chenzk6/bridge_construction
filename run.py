@@ -7,12 +7,14 @@ from utils.wrapper import VecPyTorch
 from torch_algorithms import PPO, PPO_dev
 from torch_algorithms.policies import MultiDiscreteAttentionPolicy
 from torch_algorithms import logger
+import config
 import csv
 import multiprocessing
 
-
 def main(args):
     # Configure logger
+    config.DEBUG = args.debug
+    print(f"========={config.DEBUG}")
     log_dir = args.log_path if args.log_path is not None else "/tmp/stable_baselines_" + time.strftime('%Y-%m-%d-%H-%M-%S')
     configure_logger(log_dir)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

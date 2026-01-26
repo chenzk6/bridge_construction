@@ -41,7 +41,6 @@ def evaluate(eval_env: VecPyTorch, policy, device, n_episode, n_obj, render=Fals
                 deterministic=False)
 
         print(eval_env.get_attr("step_counter")[0], action.cpu().numpy()[0])
-        print(eval_env.get_attr("step_counter")[0], action.cpu().numpy()[0])
         img = eval_env.get_images()[0]
         ax.cla()
         ax.text(text_x, text_y, "Episode %d, Step %d, Value %.3f" % (len(eval_episode_rewards),

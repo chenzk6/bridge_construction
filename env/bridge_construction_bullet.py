@@ -15,7 +15,7 @@ from env.bullet_rotations import quat2euler, quat_mul, euler2quat, quat2mat, is_
 
 
 BASIC_COLORS = [[1.0, 0, 0], [1, 1, 0], [0.2, 0.8, 0.8], [0.8, 0.2, 0.8], [0, 0, 0], [0.0, 0.0, 1.0], [0.5, 0.2, 0.0]]
-cliff_x_ = 1.2
+cliff_x_ = 1.15
 
 def _out_of_reach(object_pos, cliff0_center, cliff1_center, object_size, cliff_size, cos_theta=0):
     # Out of reach will happen at reset,
@@ -313,11 +313,16 @@ class BulletBridgeConstructionLow(RobotGymBaseEnv):
         #                        [np.array([0.9 + 0.15 * (i - 2), 0.26, self._block_thickness]) for i in range(2, 4)] + \
         #                        [np.array([0.9 + 0.15 * (i - 4), 0.94, self._block_thickness]) for i in range(4 ,6)] + \
         #                        [np.array([0.9 + 0.15 * (i - 6), 1.2, self._block_thickness]) for i in range(6, 7)]
+
+        self.block_reset_pos = [np.array([0.8 + 0.15 * i, 0.1, self._block_thickness]) for i in range(2)] + \
+                               [np.array([0.8 + 0.15 * (i - 2), 0.36, self._block_thickness]) for i in range(2, 4)] + \
+                               [np.array([0.8 + 0.15 * (i - 4), 0.84, self._block_thickness]) for i in range(4 ,6)] + \
+                               [np.array([0.8 + 0.15 * (i - 6), 1.1, self._block_thickness]) for i in range(6, 7)]
                             
-        self.block_reset_pos = [np.array([0.9 + 0.12 * i, 0.1, self._block_thickness]) for i in range(2)] + \
-                               [np.array([0.9 + 0.12 * (i - 2), 0.36, self._block_thickness]) for i in range(2, 4)] + \
-                               [np.array([0.9 + 0.12 * (i - 4), 0.84, self._block_thickness]) for i in range(4 ,6)] + \
-                               [np.array([0.9 + 0.12 * (i - 6), 1.1, self._block_thickness]) for i in range(6, 7)]
+        # self.block_reset_pos = [np.array([0.9 + 0.12 * i, 0.1, self._block_thickness]) for i in range(2)] + \
+        #                        [np.array([0.9 + 0.12 * (i - 2), 0.36, self._block_thickness]) for i in range(2, 4)] + \
+        #                        [np.array([0.9 + 0.12 * (i - 4), 0.84, self._block_thickness]) for i in range(4 ,6)] + \
+        #                        [np.array([0.9 + 0.12 * (i - 6), 1.1, self._block_thickness]) for i in range(6, 7)]
 
         # self.block_reset_pos = [np.array([0.9 + 0.15 * i, 0.1, self._block_thickness]) for i in range(2)] + \
         #                        [np.array([0.9 + 0.15 * (i - 2), 0.36, self._block_thickness]) for i in range(2, 4)] + \
@@ -597,7 +602,7 @@ class BulletBridgeConstructionHigh(gym.Env):
         # 添加机器人状态调试  
         robot_state = self.env.p.getLinkState(self.env.robot._robot, self.env.robot.end_effector_index)
         robot_pos, robot_orn = robot_state[0], robot_state[1]
-        print(f"[SKYLINE_DEBUG] 机器人末端位置: {robot_pos}")
+        # print(f"[SKYLINE_DEBUG] 机器人末端位置: {robot_pos}")
 
         # TODO: we must make sure the robot arm does not conflict with skyline detection
         if self.env.random_size:
@@ -796,26 +801,19 @@ class BulletBridgeConstructionHigh(gym.Env):
                 target_orn = action[4: 7]
                 target_orn[0: 2] = 0.
             out_of_reach = False
-            # if _out_of_reach(target_pos, self.get_cliff_pos(0), self.get_cliff_pos(1), self.env.block_size[idx],
-            #                 self.env.cliff_size, cos_theta=abs(np.cos(target_orn[2] * np.pi))):
-            #     target_pos = self.get_block_reset_pos(idx)
-            #     target_orn = np.array([0., 0., 0.])
-            #     out_of_reach = True
+            if _out_of_reach(target_pos, self.get_cliff_pos(0), self.get_cliff_pos(1), self.env.block_size[idx],
+                            self.env.cliff_size, cos_theta=abs(np.cos(target_orn[2] * np.pi))):
+                target_pos = self.get_block_reset_pos(idx)
+                target_orn = np.array([0., 0., 0.])
+                out_of_reach = True
 
             # 在计算目标位置后添加调试
             # print(f"[ENV_DEBUG] 动作转换:")  
             # print(f"  原始动作: {action}")  
             # print(f"  选中物体: {idx}")  
-            print(f"  目标位置: {target_pos}")  
-            # print(f"  目标姿态: {target_orn}")  
-            # print(f"  是否超出范围: {out_of_reach}")  
+            print(f"  目标位置2: {target_pos}")  
             if out_of_reach:  
                 print(f"[ENV_DEBUG] 位置超出范围，重置为: {self.get_block_reset_pos(idx)}")
-            
-            # if self.env.robot_name == "lh":
-            #     # ✅ 应用逆转换,让策略输出的简单坐标能正确执行
-            #     target_pos = self._compensate_lh_transform(target_pos)
-            #     print(f"  转换后目标位置: {target_pos}")
             
             return idx, target_pos, target_orn, out_of_reach
         return None

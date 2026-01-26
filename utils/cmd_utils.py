@@ -63,5 +63,6 @@ def parse_cmd():
 
     parser.add_argument("--force_scale", type=float, default=0, help="random force applied after releasing finger")
     parser.add_argument("--adaptive_primitive", action="store_true", default=False)
+    parser.add_argument("--debug", action="store_true", default=False)
     args = parser.parse_args()
     return args

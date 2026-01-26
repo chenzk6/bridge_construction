@@ -6,12 +6,15 @@ __pycache__
 trained_models/
 logs/lh_train/*.csv
 logs/pre_train/*.csv
+logs/lh_train_after/*.csv
+logs/lh_finetune/*.csv
 logs/lh_train/*.pt
+logs/xarm_train_after/*
 tmp/
+tmp*.bullet
 logs/lh_train/log.txt
 logs/pre_train/*.pt
 low_level_paths.pkl
 logs/pre_train/log.txt
 test*.py
-tmp5a4a8026-8e5b-4122-a493-a601a8b29ee0.bullet
-.gitignore
+tmp*.bullet

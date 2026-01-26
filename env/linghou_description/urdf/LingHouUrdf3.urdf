@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <robot name="LR4_R560">
     <link name="robot_base">
-            <inertial>
+        <!-- <inertial>
             <origin xyz="0.141673 -0.000165 0.081066" rpy="0 0 0"/>
             <mass value="10.0"/>
             <inertia ixx="0.05" ixy="0.0" ixz="0.0"
                     iyy="0.05" iyz="0.0"
                     izz="0.08"/>
-        </inertial>
+        </inertial> -->
         <collision name="LR4_R560">
             <origin xyz="-0.000000 -0.000000 -0.000000" rpy="-3.141593 3.141593 -3.141593" />
             <geometry>
@@ -198,13 +198,13 @@
             velocity="7.255"/>
     </joint>
     <link name="LR4_R560_link2_respondable">
-        <inertial>
+        <!-- <inertial>
             <origin xyz="-0.002580 0.000034 0.090611" rpy="0 0 0"/>
             <mass value="6.0"/>
             <inertia ixx="0.04" ixy="0.0" ixz="0.0"
                     iyy="0.04" iyz="0.0"
                     izz="0.01"/>
-        </inertial>
+        </inertial> -->
         <collision name="LR4_R560_link2_respondable">
             <origin xyz="-0.090228 0.000044 -0.200573" rpy="3.141589 3.141592 -3.141593" />
             <geometry>
@@ -395,13 +395,13 @@
             velocity="7.255"/>  <!-- 416°/s = 7.255 rad/s -->
     </joint>
     <link name="LR4_R560_link3_respondable">
-        <inertial>
+        <!-- <inertial>
             <origin xyz="0.003296 0.126862 0.000113" rpy="0 0 0"/>
             <mass value="5.0"/>
             <inertia ixx="0.02" ixy="0.0" ixz="0.0"
                     iyy="0.02" iyz="0.0"
                     izz="0.03"/>
-        </inertial>
+        </inertial> -->
         <collision name="LR4_R560_link3_respondable">
             <origin xyz="-0.070228 -0.345073 -0.000045" rpy="1.570797 3.141593 3.141593" />
             <geometry>
@@ -514,13 +514,13 @@
             velocity="8.062"/>  <!-- 462°/s = 8.062 rad/s -->
     </joint>
     <link name="LR4_R560_link4_respondable">
-        <inertial>
+        <!-- <inertial>
             <origin xyz="0.013688 0.002571 0.002943" rpy="0 0 0"/>
             <mass value="2.0"/>
             <inertia ixx="0.008" ixy="0.0" ixz="0.0"
                     iyy="0.008" iyz="0.0"
                     izz="0.004"/>
-        </inertial>
+        </inertial> -->
         <collision name="LR4_R560_link4_respondable">
             <origin xyz="0.070228 0.605073 -0.000046" rpy="1.570797 3.141600 0.000000" />
             <geometry>
@@ -615,13 +615,13 @@
             velocity="8.727"/>  <!-- 500°/s = 8.727 rad/s -->
     </joint>
     <link name="LR4_R560_link5_respondable">
-        <inertial>
+        <!-- <inertial>
             <origin xyz="-0.006137 -0.000332 0.112352" rpy="0 0 0"/>
             <mass value="1.5"/>
             <inertia ixx="0.006" ixy="0.0" ixz="0.0"
                     iyy="0.006" iyz="0.0"
                     izz="0.003"/>
-        </inertial>
+        </inertial> -->
         <collision name="LR4_R560_link5_respondable">
             <origin xyz="0.624385 -0.000046 -0.014097" rpy="-0.000405 1.580182 3.141188" />
             <geometry>
@@ -728,13 +728,13 @@
             velocity="9.774"/>  <!-- 560°/s = 9.774 rad/s -->
     </joint>
     <link name="LR4_R560_link6_respondable">
-        <inertial>
+        <!-- <inertial>
             <origin xyz="-0.014049 0.000067 -0.000817" rpy="0 0 0"/>
             <mass value="1.2"/>
             <inertia ixx="0.005" ixy="0.0" ixz="0.0"
                     iyy="0.005" iyz="0.0"
                     izz="0.002"/>
-        </inertial>
+        </inertial> -->
         <collision name="LR4_R560_link6_respondable">
             <origin xyz="0.209950 0.622439 0.000048" rpy="-1.570793 3.141600 3.141590" />
             <geometry>
@@ -985,13 +985,13 @@
             velocity="12.915"/> <!-- 740°/s = 12.915 rad/s -->
     </joint>
     <link name="LR4_R560_link7_respondable">
-        <inertial>
+        <!-- <inertial>
             <origin xyz="-0.000154 0.000131 0.005256" rpy="0 0 0"/>
             <mass value="0.3"/>
             <inertia ixx="0.0003" ixy="0.0" ixz="0.0"
                     iyy="0.0003" iyz="0.0"
                     izz="0.00015"/>
-        </inertial>
+        </inertial> -->
         <collision name="LR4_R560_link7_respondable">
             <origin xyz="0.358092 -0.511492 -0.271093" rpy="-0.000392 1.580189 2.181266" />
             <geometry>
