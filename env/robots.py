@@ -119,8 +119,8 @@ class ArmRobot(object):
 
         actual_pos = self.get_end_effector_pos()  
         target_pos = np.asarray(self.endEffectorPos)  
-        print(f"目标位置1: {target_pos}")  
-        print(f"实际位置: {actual_pos}")  
+        # print(f"目标位置1: {target_pos}")  
+        # print(f"实际位置: {actual_pos}")  
         # print(f"位置误差: {np.linalg.norm(actual_pos - target_pos)}")
         # print('after reset, endpos', self.get_end_effector_pos(), self.get_end_effector_orn(as_type="quat"), jointPoses)
         # for i in range(self.num_joints):
@@ -844,7 +844,7 @@ class XArm7Robot(ArmRobot):
         physics_client,
         urdfrootpath=XARM_MODEL_DIR,
         init_qpos=None,
-        init_end_effector_pos=(0.8, 0.1, 0.2),  # (1.0, 0.3, 0.6)
+        init_end_effector_pos=(1.0, 0.6, 0.2 ),  # (1.0, 0.3, 0.6)  (1.15,       0.86190476, 0.14761904)
         useOrientation=True,
         useNullSpace=True,
     ):
@@ -882,10 +882,17 @@ class XArm7Robot(ArmRobot):
                 :, :3
             ]
         )
+        print("init gripper quat", init_gripper_quat)
         topdown_quat = quat_mul(
             np.array([0.0, 0.0, np.sin(np.pi / 4), np.cos(np.pi / 4)]),
             init_gripper_quat,
         )
+        # topdown_quat = quat_mul(
+        #     np.array([0.0, np.sin(-np.pi / 4), 0, np.cos(-np.pi / 4)]),
+        #     init_gripper_quat,
+        # )
+        # topdown_quat = np.array([0, 1, 0., 0.])
+        # topdown_quat = topdown_quat / np.linalg.norm(topdown_quat)
         topdown = quat2euler(topdown_quat)
         super(XArm7Robot, self).__init__(
             physics_client,
@@ -947,11 +954,11 @@ class XArm7Robot(ArmRobot):
         joint_poses = self.kin_free4.inverse(
             ee_pose.reshape(-1)
         ) + self.kin_free0.inverse(ee_pose.reshape(-1))
-        print(f"[DEBUG] 目标位置3: {pos}")
+        # print(f"[DEBUG] 目标位置3: {pos}")
         # print(f"[DEBUG] 相对位置: {ik_pos.T}")
         # 调用 IKFast 求解
-        if len(joint_poses) == 0:  
-            print(f"[IK FAILED] 无法求解位姿: {pos}, {orn}")
+        # if len(joint_poses) == 0:  
+        #     print(f"[IK FAILED] 无法求解位姿: {pos}, {orn}")
         n_solutions = len(joint_poses) // self.kin_free4.getDOF()
         joint_poses = (
             np.array(joint_poses).reshape(n_solutions, self.kin_free4.getDOF()).tolist()
@@ -969,17 +976,14 @@ class XArm7Robot(ArmRobot):
 
 def quat_rot_vec(quat, vec):
     """用四元数旋转向量
-    
     Args:
         quat: 四元数 [x, y, z, w]
         vec: 3D向量 [x, y, z]
-    
     Returns:
         旋转后的向量
     """
     quat = np.array(quat)
     vec = np.array(vec)
-    
     # 使用已有的 quat2mat 函数
     rot_mat = quat2mat(quat)
     return rot_mat @ vec
@@ -1065,9 +1069,9 @@ class LHRobot(ArmRobot):
         print(f"FK结果: {fk_pos_world}")
         print(f"误差: {np.linalg.norm(np.array(test_pos) - fk_pos_world):.6f}m")
     def __init__(self, physics_client, urdfrootpath=LH_MODEL_DIR, init_qpos=None,
-                 init_end_effector_pos=(1.0, 0.6, 0.2),
+                 init_end_effector_pos=(1.0, 0.6, 0.25),
                  useOrientation=True, useNullSpace=True):
-        #1.0, 0.6, 0.2
+        #(1.0, 0.6, 0.2)
         if init_qpos is None:
             init_qpos = [0, 0, np.pi / 4, 0, -np.pi / 4, 0, 0, 0, 0,
                          0, 0, 0, 0, 0, 0]
@@ -1076,27 +1080,29 @@ class LHRobot(ArmRobot):
         reset_finger_joints = [0.] * 6
         # # 导入 IKFast 求解器
         import env.ikfastpy.LH_ikFast as LH_ikFast
+        import env.ikfastpy.LH_ikFast_free4 as LH_ikFast_free4
+        import env.ikfastpy.LH_ikFast_free5 as LH_ikFast_free5
 
         self.lh_kin = LH_ikFast.PyKinematics()
+        self.lh_kin_free4 = LH_ikFast_free4.PyKinematics()
+        self.lh_kin_free5 = LH_ikFast_free5.PyKinematics()
 
         init_gripper_quat = mat2quat(
             np.reshape(self.lh_kin.forward([0., 0., 0., 0., 0., 0.]), [3, 4])[:, :3]
         )
+        print("init gripper quat", init_gripper_quat)
         topdown_quat = quat_mul(np.array([0, np.sin(-np.pi / 4), 0, np.cos(-np.pi / 4)]), 
                        init_gripper_quat)
-        # topdown_quat = quat_mul(np.array([0, 0, np.sin(np.pi / 4), np.cos(np.pi / 4)]), 
-        #                init_gripper_quat)
-        init_gripper_euler = quat2euler(topdown_quat)
         
-        init_gripper_axis = quat_rot_vec(topdown_quat, np.array([0., 0., 1.]))
-
-        self.base_orn = [0.0, 0.0, 1.0, 0.0]  # 四元数表示绕Z轴180度旋转
-
+        # topdown_quat = [0.20306896, -0.11109689, -0.69513199, -0.6805968]
+        init_gripper_euler = quat2euler(topdown_quat)
+        # init_gripper_axis = quat_rot_vec(topdown_quat, np.array([-1., 0., 0.]))
+        self.base_orn = [0., 0., 1., 0.]  # 四元数表示绕Z轴180度旋转
         super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,
                                           [0.85, 0.6, 0.0], self.base_orn, init_end_effector_pos,
                                           init_gripper_euler, end_effector_index, reset_finger_joints,
                                           useOrientation, useNullSpace, init_gripper_euler,
-                                          init_gripper_axis, init_gripper_quat)
+                                          np.array([-1., 0., 0.]), init_gripper_quat)
         # np.array([0., 0., -1.])
 
         self.collision_pairs = set()
@@ -1134,20 +1140,19 @@ class LHRobot(ArmRobot):
 
         # 调试输出
         # if config.DEBUG:
-        print(f"[DEBUG] 目标位置3: {pos}")
-            # print(f"[DEBUG] 相对位置: {ik_pos.T}")
+        # print(f"[DEBUG] 目标位置3: {pos}")
         
         # 调用 IKFast 求解
-        joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
-        if len(joint_pose) == 0:  
-            print(f"[IK FAILED] 无法求解位姿: {pos}, {orn}")
+        # joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
+        joint_pose = self.lh_kin_free4.inverse(ee_pose.reshape(-1).tolist())\
+              + self.lh_kin_free5.inverse(ee_pose.reshape(-1).tolist())\
+              + self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
+        # if len(joint_pose) == 0:
+        #     print(f"[IK FAILED] 无法求解位姿: {pos}, {orn}")
         # if config.DEBUG:
-            # print(f"[DEBUG] IK 返回长度: {len(joint_pose)}")
-        # 处理多个解
+        # print(f"[DEBUG] IK 返回长度: {len(joint_pose)}")
         n_solutions = len(joint_pose) // 6
         joint_pose = np.reshape(joint_pose, (n_solutions, 6))
-        
-        # 过滤超出关节限制的解
         valid_solutions = []
         for solution in joint_pose:
             if np.all(solution > np.array(self.joint_ll) - 5e-3) and np.all(
