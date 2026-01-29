@@ -1,1 +1,2 @@
 DEBUG = False
+CLIFF_X = 1.15
