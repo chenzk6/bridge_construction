@@ -63,8 +63,8 @@ The API calls are slightly different for versions > 54
 
 #define IK_VERSION 61
 // #include "ikfast61_xarm7_free4.cpp"
-#include "ikfast61.cpp"
-// #include "ikfast61_free4.cpp"
+// #include "ikfast61.cpp"
+#include "ikfast61_free4.cpp"
 // #include "ikfast61_free5.cpp"
 
 //#define IK_VERSION 56
