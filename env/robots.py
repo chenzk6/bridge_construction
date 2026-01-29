@@ -981,7 +981,7 @@ class LHRobot(ArmRobot):
         physics_client,
         urdfrootpath=LH_MODEL_DIR,
         init_qpos=None,
-        init_end_effector_pos=(0.7, 0.3, 0.3),  # 底座坐标为：[0.7, 0.6, 0.005]
+        init_end_effector_pos=(0.85, 0.3, 0.3),  # 底座坐标为：[0.7, 0.6, 0.005]
         useOrientation=True,
         useNullSpace=True,
     ):
@@ -993,8 +993,12 @@ class LHRobot(ArmRobot):
         reset_finger_joints = [0.0] * 6
 
         import env.ikfastpy.LH_ikFast as LH_ikFast
+        import env.ikfastpy.LH_ikFast_free4 as LH_ikFast_free4
+        import env.ikfastpy.LH_ikFast_free5 as LH_ikFast_free5
 
         self.lh_kin = LH_ikFast.PyKinematics()
+        self.lh_kin_free4 = LH_ikFast_free4.PyKinematics()
+        self.lh_kin_free5 = LH_ikFast_free5.PyKinematics()
 
         init_gripper_quat = mat2quat(
             np.reshape(self.lh_kin.forward([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]), [3, 4])[
@@ -1014,7 +1018,7 @@ class LHRobot(ArmRobot):
             "LingHouUrdf3.urdf",
             urdfrootpath,
             init_qpos,
-            [0.75, 0.6, 0.005],
+            [0.85, 0.6, 0.005],
             [0.0, 0.0, 1.0, 0.0],
             init_end_effector_pos,
             topdown,
@@ -1095,7 +1099,7 @@ class LHRobot(ArmRobot):
         ik_pos = np.reshape(ik_pos_ikfast, (3, 1))
         ee_pose = np.concatenate([ik_mat_ikfast, ik_pos], axis=-1)
 
-        joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1))
+        joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1)) + self.lh_kin_free4.inverse(ee_pose.reshape(-1)) + self.lh_kin_free5.inverse(ee_pose.reshape(-1))
 
         # 处理多个解
         n_solutions = len(joint_pose) // 6
