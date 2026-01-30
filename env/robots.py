@@ -1105,18 +1105,47 @@ class LHRobot(ArmRobot):
         n_solutions = len(joint_pose) // 6
         joint_pose = (np.array(joint_pose)).reshape(n_solutions, 6).tolist()
 
-        if n_solutions > 0:
-            # 过滤超出关节限制的解
-            joint_pose = list(
-                filter(
-                    lambda conf: np.all(np.array(conf) > np.array(self.joint_ll) - 1e-3)
-                    and np.all(np.array(conf) < np.array(self.joint_ul) + 1e-3),
-                    joint_pose,
-                )
-            )
-            n_solutions = len(joint_pose)
+        valid_solutions = []
+        base_rot_mat = quat2mat(self.base_orn)
 
-        return np.array(joint_pose), {"is_success": n_solutions > 0}
+        for solution in joint_pose:
+            #关节限制
+            if not (np.all(solution > np.array(self.joint_ll) - 1e-3) and
+                    np.all(solution < np.array(self.joint_ul) + 1e-3)):
+                continue
+
+            #正向运动学验证
+            fk_result = self.lh_kin.forward(solution)
+            fk_matrix = np.reshape(fk_result, [3, 4])
+            
+            # FK结果转换回世界坐标系
+            fk_pos_base = fk_matrix[:, 3]
+            fk_rot_base = fk_matrix[:, :3]
+            
+            fk_pos_world = base_rot_mat @ fk_pos_base + self.base_pos
+            fk_rot_world = base_rot_mat @ fk_rot_base
+            
+            # 计算位置误差
+            pos_error = np.linalg.norm(fk_pos_world - np.array(pos))
+            
+            # 计算姿态误差
+            target_rot = quat2mat(orn)
+            rot_diff = fk_rot_world.T @ target_rot
+            orn_error = np.arccos(np.clip((np.trace(rot_diff) - 1) / 2, -1, 1))
+            
+            if DEBUG:
+                print(f"    验证解: j4={solution[3]:.3f}, j5={solution[4]:.3f}")
+                print(f"    位置误差: {pos_error:.6f}m")
+                print(f"    姿态误差: {np.degrees(orn_error):.2f}°")
+            
+            #误差阈值
+            if pos_error < 0.01 and orn_error < np.radians(10):# 10度
+                valid_solutions.append(solution)
+            else:
+                if DEBUG:
+                    print(f"误差过大")
+
+        return np.array(valid_solutions), {"is_success": len(valid_solutions) > 0}
 
 
 if __name__ == "__main__":
