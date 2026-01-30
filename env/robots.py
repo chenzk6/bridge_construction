@@ -1094,7 +1094,7 @@ class LHRobot(ArmRobot):
         topdown_quat = quat_mul(np.array([0, np.sin(-np.pi / 4), 0, np.cos(-np.pi / 4)]), 
                        init_gripper_quat)
         
-        # topdown_quat = [0.20306896, -0.11109689, -0.69513199, -0.6805968]
+        # topdown_quat = [0.23488194,  0.14715856,  0.69483333, -0.66361244]
         init_gripper_euler = quat2euler(topdown_quat)
         # init_gripper_axis = quat_rot_vec(topdown_quat, np.array([-1., 0., 0.]))
         self.base_orn = [0., 0., 1., 0.]  # 四元数表示绕Z轴180度旋转
@@ -1135,18 +1135,14 @@ class LHRobot(ArmRobot):
         ik_pos = base_rot_mat.T @ ik_pos  # 添加基座旋转的逆变换
         ik_mat = quat2mat(orn)
         ik_mat = base_rot_mat.T @ ik_mat  # 姿态也需要变换
-
         ee_pose = np.concatenate([ik_mat, ik_pos], axis=-1)
-
-        # 调试输出
-        # if config.DEBUG:
-        # print(f"[DEBUG] 目标位置3: {pos}")
-        
         # 调用 IKFast 求解
-        # joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
-        joint_pose = self.lh_kin_free4.inverse(ee_pose.reshape(-1).tolist())\
-              + self.lh_kin_free5.inverse(ee_pose.reshape(-1).tolist())\
-              + self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
+        joint_pose = self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
+
+        # joint_pose = self.lh_kin_free4.inverse(ee_pose.reshape(-1).tolist())\
+        #       + self.lh_kin_free5.inverse(ee_pose.reshape(-1).tolist())\
+        #       + self.lh_kin.inverse(ee_pose.reshape(-1).tolist())
+
         # if len(joint_pose) == 0:
         #     print(f"[IK FAILED] 无法求解位姿: {pos}, {orn}")
         # if config.DEBUG:
@@ -1154,11 +1150,46 @@ class LHRobot(ArmRobot):
         n_solutions = len(joint_pose) // 6
         joint_pose = np.reshape(joint_pose, (n_solutions, 6))
         valid_solutions = []
+        # for solution in joint_pose:
+        #     if np.all(solution > np.array(self.joint_ll) - 1e-3) and np.all(
+        #         solution < np.array(self.joint_ul) + 1e-3
+        #     ):
+        #         valid_solutions.append(solution)
+
         for solution in joint_pose:
-            if np.all(solution > np.array(self.joint_ll) - 5e-3) and np.all(
-                solution < np.array(self.joint_ul) + 5e-3
-            ):
+            #关节限制
+            if not (np.all(solution > np.array(self.joint_ll) - 1e-3) and
+                    np.all(solution < np.array(self.joint_ul) + 1e-3)):
+                continue
+
+            #正向运动学验证
+            fk_result = self.lh_kin.forward(solution.tolist())
+            fk_matrix = np.reshape(fk_result, [3, 4])
+            
+            # FK结果转换回世界坐标系
+            fk_pos_base = fk_matrix[:, 3]
+            fk_rot_base = fk_matrix[:, :3]
+            
+            fk_pos_world = base_rot_mat @ fk_pos_base + self.base_pos
+            fk_rot_world = base_rot_mat @ fk_rot_base
+            
+            # 计算位置误差
+            pos_error = np.linalg.norm(fk_pos_world - np.array(pos))
+            
+            # 计算姿态误差
+            target_rot = quat2mat(orn)
+            rot_diff = fk_rot_world.T @ target_rot
+            orn_error = np.arccos(np.clip((np.trace(rot_diff) - 1) / 2, -1, 1))
+            
+            print(f"    验证解: j4={solution[3]:.3f}, j5={solution[4]:.3f}")
+            print(f"    位置误差: {pos_error:.6f}m")
+            print(f"    姿态误差: {np.degrees(orn_error):.2f}°")
+            
+            #误差阈值
+            if pos_error < 0.01 and orn_error < np.radians(10):# 10度
                 valid_solutions.append(solution)
+            else:
+                print(f"误差过大")
 
         return np.array(valid_solutions), {"is_success": len(valid_solutions) > 0}
 
