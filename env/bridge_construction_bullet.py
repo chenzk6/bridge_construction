@@ -885,7 +885,9 @@ class BulletBridgeConstructionHigh(gym.Env):
                              })
         info.update({'cur_num_objects': self.get_cur_num_objects()})
         reward = self.compute_reward(info, start_pos, start_rot, stable_pos, stable_rot, render=render)
-        done = False
+        # done = False
+        done = info['is_success']
+        print("done:", done)
         info.update({'next_skyline': self._calculate_skyline()[0]})
         self.step_counter += 1
         next_obs = self._get_obs()
