@@ -198,6 +198,17 @@ class PPO_dev(object):
                             aux_infos = np.stack([infos[i]['terminal_observation'] for i in range(len(infos))], axis=0)
                         else:
                             aux_infos = obs  # the next observation,
+                    # if self.auxiliary_task_name == "next_state" or self.auxiliary_task_name == "inverse_dynamics":
+                    #     if np.sum(done) > 0:
+                    #         terminal_obs = []
+                    #         for i in range(len(infos)):
+                    #             if 'terminal_observation' in infos[i]:
+                    #                 terminal_obs.append(infos[i]['terminal_observation'])
+                    #             else:
+                    #                 terminal_obs.append(obs[i])  # 使用当前观察作为后备
+                    #         aux_infos = np.stack(terminal_obs, axis=0)
+                    #     else:
+                    #         aux_infos = obs  # the next observation
                     else:
                         for info in infos:
                             if self.auxiliary_task_name == "skyline":

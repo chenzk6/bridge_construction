@@ -1071,7 +1071,7 @@ class LHRobot(ArmRobot):
     def __init__(self, physics_client, urdfrootpath=LH_MODEL_DIR, init_qpos=None,
                  init_end_effector_pos=(1.0, 0.6, 0.25),
                  useOrientation=True, useNullSpace=True):
-        #(1.0, 0.6, 0.2)
+        #(1.0, 0.6, 0.25)
         if init_qpos is None:
             init_qpos = [0, 0, np.pi / 4, 0, -np.pi / 4, 0, 0, 0, 0,
                          0, 0, 0, 0, 0, 0]
@@ -1104,6 +1104,7 @@ class LHRobot(ArmRobot):
                                           useOrientation, useNullSpace, init_gripper_euler,
                                           np.array([-1., 0., 0.]), init_gripper_quat)
         # np.array([0., 0., -1.])
+        # [0.85, 0.6, 0.0]      [0.85, 0.6, -0.02]
 
         self.collision_pairs = set()
         # self._verify_fk()
@@ -1181,9 +1182,9 @@ class LHRobot(ArmRobot):
             rot_diff = fk_rot_world.T @ target_rot
             orn_error = np.arccos(np.clip((np.trace(rot_diff) - 1) / 2, -1, 1))
             
-            print(f"    验证解: j4={solution[3]:.3f}, j5={solution[4]:.3f}")
-            print(f"    位置误差: {pos_error:.6f}m")
-            print(f"    姿态误差: {np.degrees(orn_error):.2f}°")
+            # print(f"    验证解: j4={solution[3]:.3f}, j5={solution[4]:.3f}")
+            # print(f"    位置误差: {pos_error:.6f}m")
+            # print(f"    姿态误差: {np.degrees(orn_error):.2f}°")
             
             #误差阈值
             if pos_error < 0.01 and orn_error < np.radians(10):# 10度

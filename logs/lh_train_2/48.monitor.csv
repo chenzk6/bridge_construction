@@ -1,0 +1,9 @@
+#{"t_start": 1775615797.9689093, "env_id": "FetchBridgeBullet7Blocks-v1"}
+r,l,t,is_success
+0.0,30,14.930984,False
+0.0,30,20.19413,False
+0.1,30,26.315692,True
+0.0,30,32.167002,False
+0.0,30,37.73152,False
+0.0,30,43.261203,False
+0.0,30,48.759918,False

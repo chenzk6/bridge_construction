@@ -10,11 +10,13 @@ logs/lh_train_after/*.csv
 logs/lh_finetune/*.csv
 logs/lh_train/*.pt
 logs/xarm_train_after/*
+logs/lh_train_1/*
+logs/lh_train_after*
 tmp/
 tmp*.bullet
 logs/lh_train/log.txt
 logs/pre_train/*.pt
-low_level_paths.pkl
+# low_level_paths.pkl
 logs/pre_train/log.txt
 test*.py
 tmp*.bullet

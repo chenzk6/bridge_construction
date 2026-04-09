@@ -192,8 +192,8 @@
         <child link="LR4_R560_link2_respondable" />
         <origin xyz="0.090228 -0.000044 0.200573" rpy="-3.141589 3.141593 3.141593" />
         <limit 
-            lower="-2.967"
-            upper="2.967" 
+            lower="-2.932"
+            upper="2.932" 
             effort="23.0"
             velocity="7.255"/>
     </joint>
@@ -389,8 +389,8 @@
         <child link="LR4_R560_link3_respondable" />
         <origin xyz="-0.020000 -0.000000 0.144500" rpy="-1.570800 3.141593 -3.141592" />
         <limit 
-            lower="-2.495"
-            upper="1.518"
+            lower="-1.570"
+            upper="2.094"
             effort="23.0"
             velocity="7.255"/>  <!-- 416°/s = 7.255 rad/s -->
     </joint>
@@ -508,7 +508,7 @@
         <child link="LR4_R560_link4_respondable" />
         <origin xyz="0.000000 0.260000 0.000000" rpy="-3.141592 3.141600 -0.000000" />
         <limit 
-            lower="-3.577"
+            lower="-1.57"
             upper="0.925"
             effort="20.7"
             velocity="8.062"/>  <!-- 462°/s = 8.062 rad/s -->
@@ -609,8 +609,8 @@
         <child link="LR4_R560_link5_respondable" />
         <origin xyz="0.090184 -0.019152 0.000000" rpy="-1.570785 3.141592 -1.561411" />
         <limit 
-            lower="-3.490"
-            upper="3.490" 
+            lower="-2.967"
+            upper="2.967" 
             effort="16.3"
             velocity="8.727"/>  <!-- 500°/s = 8.727 rad/s -->
     </joint>

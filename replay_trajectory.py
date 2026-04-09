@@ -4,7 +4,7 @@ from env.bridge_construction_bullet import BulletBridgeConstructionLow
 import pybullet as p
 import time
 import numpy as np
-from realrobot_utils.setup_utils import arm_set_up, set_tcp_load
+
 
 
 def replay_sim(pkl_name):
@@ -15,7 +15,7 @@ def replay_sim(pkl_name):
     n_obj = len(meta["block_size"])
     print("meta info", meta)
     low_env = BulletBridgeConstructionLow(n_obj, random_size=True, discrete=True, mode="long", cliff_height=0.1,
-                                          render=True, need_visual=True, robot="xarm")
+                                          render=True, need_visual=True, robot="lh")
 
     low_env.p.resetDebugVisualizerCamera(2.0, 0, -45, [1.0, 0.6, 0.0])
     low_env.p.resetBasePositionAndOrientation(low_env.body_cliff0, [1.3, meta["cliff0_center"], 0.1], [0.707, 0., 0., 0.707])
@@ -104,6 +104,6 @@ def replay_real(pkl_name):
                 print('[wait]set gripper pos, code={}'.format(code))
         valid_idx += 1
 if __name__ == "__main__":
-    filename = "low_level_paths_3b_xarm.pkl"
+    filename = "low_level_paths.pkl"
     replay_sim(filename)
     # replay_real(filename)
