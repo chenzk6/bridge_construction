@@ -374,6 +374,9 @@ class BulletBridgeConstructionLow(RobotGymBaseEnv):
                                    [self._block_thickness, block_lengths[i], self._block_thickness],
                                    self.block_reset_pos[i], self.block_reset_orn[i])
                 self.block_size[i] = np.array([self._block_thickness, block_lengths[i], self._block_thickness])
+                
+                print(f"[BlockLength] block[{i}] length={block_lengths[i]:.4f}, size={self.block_size[i]}")
+            
             for i in range(self.cur_num_blocks, self.num_blocks):
                 initial_pos = np.array([0., 10.0 + i, 0.1])
                 initial_orn = np.array([0., 0., 0., 1.])
@@ -387,6 +390,9 @@ class BulletBridgeConstructionLow(RobotGymBaseEnv):
                     [self._block_thickness, block_lengths[i], self._block_thickness],
                     self.block_reset_pos[i], self.block_reset_orn[i], rgba=BASIC_COLORS[i] + [1.])
                 self.block_size[i] = np.array([self._block_thickness, block_lengths[i], self._block_thickness])
+            
+                print(f"[ ] block[{i}] length={block_lengths[i]:.4f}, size={self.block_size[i]}")
+            
             for i in range(self.cur_num_blocks, self.num_blocks):
                 initial_pos = np.array([0.0, 10.0 + i, 0.1])
                 initial_orn = np.array([0., 0., 0., 1.])
@@ -446,6 +452,9 @@ class BulletBridgeConstructionLow(RobotGymBaseEnv):
             object_i_size = np.array(self.p.getCollisionShapeData(self.body_blocks[i], -1)[0][3]) / 2
             cliff_height = np.array([cliff_size[1]])
             object_i_type = np.array([0])
+
+            print(f"Cliff0 center: {cliff0_center}, Cliff1 center: {cliff1_center}")  
+
             if _out_of_reach(object_i_pos, cliff0_center, cliff1_center, object_i_size, cliff_size,
                              cos_theta=abs(quat_rot_vec(np.array(object_i_quat), np.array([0., 1., 0.]))[1])):
                 object_i_pos = -np.ones(3)

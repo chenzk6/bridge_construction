@@ -114,7 +114,7 @@ def evaluate(eval_env: VecPyTorch, policy, device, n_episode, n_obj, render=Fals
 
 
 def evaluate_fixed_scene(eval_env, initial_positions, object_sizes, cliff0_center, cliff1_center,
-                         policy, device):
+                         policy, device,  initial_orientations=None):
     n_obj = len(initial_positions)
     eval_env.env_method("set_cur_max_objects", n_obj)
     eval_env.env_method("set_min_num_objects", n_obj)
@@ -123,7 +123,20 @@ def evaluate_fixed_scene(eval_env, initial_positions, object_sizes, cliff0_cente
     eval_env.env_method("set_force_scale", force_scale)
     print("force_scale", eval_env.get_attr("cur_force_scale")[0])
     eval_env.reset()
-    obj_poses = [np.concatenate([position, np.array([0., 0., 0., 1.])]) for position in initial_positions]
+    # obj_poses = [np.concatenate([position, np.array([0., 0., 0., 1.])]) for position in initial_positions]
+    if initial_orientations is None:
+        obj_poses = [
+        np.concatenate([position, np.array([0.0, 0.0, 0.0, 1.0])])
+        for position in initial_positions
+        ]
+    else:
+        assert len(initial_orientations) == len(initial_positions), (
+        len(initial_orientations), len(initial_positions)
+        )
+        obj_poses = [
+        np.concatenate([position, np.array(initial_orientations[i], dtype=float)])
+        for i, position in enumerate(initial_positions)
+        ]
     eval_env.env_method("reset_scene", obj_poses, object_sizes, cliff0_center, cliff1_center, None)
     obs = np.array(eval_env.env_method("get_obs"))
     num_processes = eval_env.num_envs

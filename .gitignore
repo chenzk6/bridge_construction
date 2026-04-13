@@ -19,4 +19,6 @@ logs/pre_train/*.pt
 # low_level_paths.pkl
 logs/pre_train/log.txt
 test*.py
+!test_custom_env2.py
 tmp*.bullet
+video_tmp/*
