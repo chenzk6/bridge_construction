@@ -642,7 +642,7 @@ class Primitive(object):
         if isinstance(self.plan_robot, XArm7Robot):
             self.grasp_offset = -0.16
         else:
-            self.grasp_offset = -0.17  # -0.17  # from point to grasp to eef link
+            self.grasp_offset = -0.185  # -0.17  # from point to grasp to eef link
         self.verbose = verbose
         self.teleport_arm = teleport_arm
         self.force_scale = force_scale
@@ -882,6 +882,7 @@ class Primitive(object):
         for gripper_quat in gripper_quats:
             moveable_q, info = self.planner.ik(tgt_pos + self.grasp_offset * self.prob_vec_from_quat(gripper_quat),
                                                gripper_quat)
+            print("target_pose:", tgt_pos)
             if info["is_success"]:
                 approach_q.extend(moveable_q)
         ik_time = time.time() - t1

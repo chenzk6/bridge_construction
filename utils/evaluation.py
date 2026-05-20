@@ -49,7 +49,7 @@ def evaluate(eval_env: VecPyTorch, policy, device, n_episode, n_obj, render=Fals
                 horizontalalignment='center', verticalalignment='center')
         ax.imshow(img)
         if render:
-            plt.pause(0.3)
+            plt.pause(0.1)
             plt.imsave("tmp/tmpimg%d.png" % step_count, img)
             # plt.savefig("tmp/tmpimg%d.png" % step_count, bbox_inches='tight', pad_inches=0)
         else:
@@ -114,7 +114,7 @@ def evaluate(eval_env: VecPyTorch, policy, device, n_episode, n_obj, render=Fals
 
 
 def evaluate_fixed_scene(eval_env, initial_positions, object_sizes, cliff0_center, cliff1_center,
-                         policy, device,  initial_orientations=None):
+                         policy, device,  initial_orientations=None, skip_reset=False, enable_replay=False):
     n_obj = len(initial_positions)
     eval_env.env_method("set_cur_max_objects", n_obj)
     eval_env.env_method("set_min_num_objects", n_obj)
@@ -122,7 +122,8 @@ def evaluate_fixed_scene(eval_env, initial_positions, object_sizes, cliff0_cente
     force_scale = eval_env.get_attr("force_scale")[0]
     eval_env.env_method("set_force_scale", force_scale)
     print("force_scale", eval_env.get_attr("cur_force_scale")[0])
-    eval_env.reset()
+    if not skip_reset:
+        eval_env.reset()
     # obj_poses = [np.concatenate([position, np.array([0., 0., 0., 1.])]) for position in initial_positions]
     if initial_orientations is None:
         obj_poses = [
@@ -144,7 +145,7 @@ def evaluate_fixed_scene(eval_env, initial_positions, object_sizes, cliff0_cente
         num_processes, policy.recurrent_hidden_state_size, device=device)
     eval_masks = torch.zeros(num_processes, 1, device=device)
     done = [False]
-    # low_level_paths = []
+    low_level_paths = []
     meta_info = dict(block_size=[obs[0][17 * i + 12: 17 * i + 15] for i in range(n_obj)],
                      cliff0_center=obs[0][17 * eval_env.get_attr("num_blocks")[0] + 1],
                      cliff1_center=obs[0][17 * eval_env.get_attr("num_blocks")[0] + 18])
@@ -177,11 +178,13 @@ def evaluate_fixed_scene(eval_env, initial_positions, object_sizes, cliff0_cente
         # Obser reward and next obs
         obs, reward, done, infos = eval_env.step(action.cpu().numpy())
         step_count += 1
-        # for info in infos:
-        #     low_level_paths.append(info.get("low_level_path", None))
-    # import pickle
-    # with open("low_level_paths.pkl", "wb") as f:
-    #     pickle.dump(dict(paths=low_level_paths, meta=meta_info, actions=action_seqs), f)
+        for info in infos:
+            low_level_paths.append(info.get("low_level_path", None))
+    if not enable_replay:
+        import pickle
+        with open("low_level_paths.pkl", "wb") as f:
+            pickle.dump(dict(paths=low_level_paths, meta=meta_info, actions=action_seqs), f)
+        return
     # Take shortcuts
     eval_env.env_method("enable_recording")
     valid_action_seqs = []
@@ -190,7 +193,8 @@ def evaluate_fixed_scene(eval_env, initial_positions, object_sizes, cliff0_cente
             pass
         else:
             valid_action_seqs.append(action_seqs[cur_step - 1])
-    eval_env.reset()
+    if not skip_reset:
+        eval_env.reset()
     eval_env.env_method("reset_scene", obj_poses, object_sizes, cliff0_center, cliff1_center, None)
     low_level_paths = []
     for step in range(len(valid_action_seqs)):

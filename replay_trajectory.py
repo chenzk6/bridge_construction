@@ -33,76 +33,81 @@ def replay_sim(pkl_name):
         if path is None:
             continue
         assert isinstance(path, dict)
-        for key in path.keys():
+        for key in path.keys(): 
             if path[key] is not None:
+                if key == "release_finger":
+                    print("release_finger\n")
+                    time.sleep(3)
+                if key == "close_finger":
+                    print("close_finger\n")
+                    time.sleep(3)
                 for step in range(len(path[key])):
                     set_qpos(path[key][step])
-                    time.sleep(0.05)
-                if key == "release_finger":
-                    time.sleep(1)
+                    time.sleep(0.2)
 
 
-def replay_real(pkl_name):
-    with open(pkl_name, "rb") as f:
-        info = pickle.load(f)
-    paths = info["paths"]
-    meta = info["meta"]
-    n_obj = len(meta["block_size"])
-    ################################
-    # TODO: record this in pkl file
-    meta["sizes_per_step"] = [10, 10, 12, 12, 7]
-    ################################
-    print("meta info", meta)
-    ans = input("Please verify scene configurations. Continue? [Y|n]")
-    if ans != "Y":
-        return
+
+# def replay_real(pkl_name):
+#     with open(pkl_name, "rb") as f:
+#         info = pickle.load(f)
+#     paths = info["paths"]
+#     meta = info["meta"]
+#     n_obj = len(meta["block_size"])
+#     ################################
+#     # TODO: record this in pkl file
+#     meta["sizes_per_step"] = [10, 10, 12, 12, 7]
+#     ################################
+#     print("meta info", meta)
+#     ans = input("Please verify scene configurations. Continue? [Y|n]")
+#     if ans != "Y":
+#         return
     
-    arm = arm_set_up(ip="192.168.1.226", mode=0)
-    set_tcp_load(arm, "gripper")
-    # exit()
+#     arm = arm_set_up(ip="192.168.1.226", mode=0)
+#     set_tcp_load(arm, "gripper")
+#     # exit()
     
-    valid_idx = 0
-    for idx in range(0, len(paths)):
-        total_path = paths[idx]
-        if total_path is None:
-            continue
-        # ans = input("Continue? [Y|n]")
-        # if ans != "Y":
-        #     return
-        for k in ["fetch_object", "close_finger", "change_pose", "release_finger", "lift_up", "move_back"]:
-            if k == "change_pose":
-                tcp_name = "gripper+obj" + str(int(meta["sizes_per_step"][valid_idx] * 2))
-                set_tcp_load(arm, tcp_name)
-            if k == "release_finger":
-                set_tcp_load(arm, "gripper")
-            if k in ["fetch_object", "change_pose", "lift_up", "move_back"]:
-                print(k, arm.tcp_load)
-                path = total_path[k]
-                if path is None:
-                    continue
-                if arm.connected and arm.state != 4:
-                    for idx, q in enumerate(path):
-                        angles = list(q[:7])
-                        #####################
-                        # TODO: workaround
-                        # Compensate for error in servo angle
-                        angles[3] += 3 / 180 * np.pi
-                        #####################
-                        ret = arm.set_servo_angle(angle=angles, speed=20 / 180, is_radian=True,
-                                                    wait=(idx == len(path) - 1))
-                        print(idx, 'set_servo_angle {}, ret={}'.format(angles, ret))
-                        # print(arm.get_servo_angle(is_radian=True))
-                # if k == "fetch_object":
-                #     ans = input("Continue?[Y|n]")
-                #     if ans != "Y":
-                #         return
-            elif k == "close_finger":
-                code = arm.set_gripper_position(450, wait=True)
-                print('[wait]set gripper pos, code={}'.format(code))
-            elif k == "release_finger":
-                code = arm.set_gripper_position(850, wait=True)
-                print('[wait]set gripper pos, code={}'.format(code))
-        valid_idx += 1
+#     valid_idx = 0
+#     for idx in range(0, len(paths)):
+#         total_path = paths[idx]
+#         if total_path is None:
+#             continue
+#         # ans = input("Continue? [Y|n]")
+#         # if ans != "Y":
+#         #     return
+#         for k in ["fetch_object", "close_finger", "change_pose", "release_finger", "lift_up", "move_back"]:
+#             if k == "change_pose":
+#                 tcp_name = "gripper+obj" + str(int(meta["sizes_per_step"][valid_idx] * 2))
+#                 set_tcp_load(arm, tcp_name)
+#             if k == "release_finger":
+#                 set_tcp_load(arm, "gripper")
+#             if k in ["fetch_object", "change_pose", "lift_up", "move_back"]:
+#                 print(k, arm.tcp_load)
+#                 path = total_path[k]
+#                 if path is None:
+#                     continue
+#                 if arm.connected and arm.state != 4:
+#                     for idx, q in enumerate(path):
+#                         angles = list(q[:7])
+#                         #####################
+#                         # TODO: workaround
+#                         # Compensate for error in servo angle
+#                         angles[3] += 3 / 180 * np.pi
+#                         #####################
+#                         ret = arm.set_servo_angle(angle=angles, speed=20 / 180, is_radian=True,
+#                                                     wait=(idx == len(path) - 1))
+#                         print(idx, 'set_servo_angle {}, ret={}'.format(angles, ret))
+#                         # print(arm.get_servo_angle(is_radian=True))
+#                 # if k == "fetch_object":
+#                 #     ans = input("Continue?[Y|n]")
+#                 #     if ans != "Y":
+#                 #         return
+#             elif k == "close_finger":
+#                 code = arm.set_gripper_position(450, wait=True)
+#                 print('[wait]set gripper pos, code={}'.format(code))
+#             elif k == "release_finger":
+#                 code = arm.set_gripper_position(850, wait=True)
+#                 print('[wait]set gripper pos, code={}'.format(code))
+#         valid_idx += 1
 if __name__ == "__main__":
     filename = "low_level_paths.pkl"
     replay_sim(filename)

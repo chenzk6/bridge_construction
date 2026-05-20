@@ -389,7 +389,7 @@
         <child link="LR4_R560_link3_respondable" />
         <origin xyz="-0.020000 -0.000000 0.144500" rpy="-1.570800 3.141593 -3.141592" />
         <limit 
-            lower="-1.570"
+            lower="-1.517"
             upper="2.094"
             effort="23.0"
             velocity="7.255"/>  <!-- 416°/s = 7.255 rad/s -->
@@ -508,10 +508,10 @@
         <child link="LR4_R560_link4_respondable" />
         <origin xyz="0.000000 0.260000 0.000000" rpy="-3.141592 3.141600 -0.000000" />
         <limit 
-            lower="-1.57"
+            lower="-1.57"       
             upper="0.925"
             effort="20.7"
-            velocity="8.062"/>  <!-- 462°/s = 8.062 rad/s -->
+            velocity="8.062"/>  <!-- -3.62, 0.994-->
     </joint>
     <link name="LR4_R560_link4_respondable">
         <!-- <inertial>
@@ -612,7 +612,7 @@
             lower="-2.967"
             upper="2.967" 
             effort="16.3"
-            velocity="8.727"/>  <!-- 500°/s = 8.727 rad/s -->
+            velocity="8.727"/>  <!-- -3.488 ，3.488 -->
     </joint>
     <link name="LR4_R560_link5_respondable">
         <!-- <inertial>
@@ -725,7 +725,7 @@
             lower="-2.181"
             upper="2.181" 
             effort="17.1"
-            velocity="9.774"/>  <!-- 560°/s = 9.774 rad/s -->
+            velocity="9.774"/>  <!-- -2.18，2.18 -->
     </joint>
     <link name="LR4_R560_link6_respondable">
         <!-- <inertial>
@@ -981,7 +981,7 @@
         <limit 
             lower="-6.283"
             upper="6.283" 
-            effort="13.0"
+            effort="13.0" 
             velocity="12.915"/> <!-- 740°/s = 12.915 rad/s -->
     </joint>
     <link name="LR4_R560_link7_respondable">
@@ -1262,7 +1262,7 @@
         <visual name="xarm_gripper_base_link_visual">
             <origin xyz="0.276682 0.619049 0.081805" rpy="-1.439237 3.142385 -3.132762" />
             <geometry>
-                <mesh filename="../meshes/linkhou_xarm_gripper_base_link_visual_vis_1.dae" />
+                <mesh filename="../meshes/linkhou_xarm_gripper_base_link_visual_vis_1.dae" scale="1 1 1"/>
             </geometry>
             <material name="xarm_gripper_base_link_visual_material">
                 <color rgba="1.000000 1.000000 1.000000 1.0" />
@@ -1271,7 +1271,7 @@
     </link>
     <joint name="drive_joint" type="revolute">
         <axis xyz="0 0 1" />
-        <limit upper="0.85" effort="50.0" velocity="2.0" lower="0.0" />
+        <limit upper="0.65" effort="50.0" velocity="2.0" lower="0.0" />
         <parent link="xarm_gripper_base_link_respondable" />
         <child link="left_outer_knuckle_respondable" />
         <origin xyz="-0.059098 0.035000 -0.000000" rpy="-3.141593 3.141593 3.141593" />
@@ -1283,13 +1283,13 @@
             <mass value="0.033618" />
         </inertial>
         <collision name="left_outer_knuckle_respondable">
-            <origin xyz="0.335780 0.584049 0.081805" rpy="-1.439237 3.142385 -3.132762" />
+            <origin xyz="0.313780 0.574049 0.081805" rpy="-1.439237 3.142385 -3.132762" />
             <geometry>
                 <mesh filename="../meshes/linkhou_left_outer_knuckle_respondable_coll_1.dae" />
             </geometry>
         </collision>
         <visual name="left_outer_knuckle_visual">
-            <origin xyz="0.335780 0.584049 0.081805" rpy="-1.439237 3.142385 -3.132762" />
+            <origin xyz="0.313780 0.574049 0.081805" rpy="-1.439237 3.142385 -3.132762" />
             <geometry>
                 <mesh filename="../meshes/linkhou_left_outer_knuckle_visual_vis_1.dae" />
             </geometry>
@@ -1312,13 +1312,13 @@
             <mass value="0.048304" />
         </inertial>
         <collision name="left_finger_respondable">
-            <origin xyz="-0.377819 0.548584 -0.081805" rpy="1.702355 3.140800 -0.008831" />
+            <origin xyz="-0.355819 0.538584 -0.081805" rpy="1.702355 3.140800 -0.008831" />
             <geometry>
                 <mesh filename="../meshes/linkhou_left_finger_respondable_coll_1.dae" />
             </geometry>
         </collision>
         <visual name="left_finger_visual">
-            <origin xyz="-0.377819 0.548584 -0.081805" rpy="1.702355 3.140800 -0.008831" />
+            <origin xyz="-0.355819 0.538584 -0.081805" rpy="1.702355 3.140800 -0.008831" />
             <geometry>
                 <mesh filename="../meshes/linkhou_left_finger_visual_vis_1.dae" />
             </geometry>
@@ -1341,13 +1341,13 @@
             <mass value="0.023012578125671" />
         </inertial>
         <collision name="left_inner_knuckle_respondable">
-            <origin xyz="0.350780 0.599049 0.081805" rpy="-1.439237 3.142385 -3.132762" />
+            <origin xyz="0.328780 0.589049 0.081805" rpy="-1.439237 3.142385 -3.132762" />
             <geometry>
                 <mesh filename="../meshes/linkhou_left_inner_knuckle_respondable_coll_1.dae" />
             </geometry>
         </collision>
         <visual name="left_inner_knuckle_visual">
-            <origin xyz="0.350780 0.599049 0.081805" rpy="-1.439237 3.142385 -3.132762" />
+            <origin xyz="0.328780 0.589049 0.081805" rpy="-1.439237 3.142385 -3.132762" />
             <geometry>
                 <mesh filename="../meshes/linkhou_left_inner_knuckle_visual_vis_1.dae" />
             </geometry>
@@ -1358,7 +1358,7 @@
     </link>
     <joint name="right_outer_knuckle_joint" type="revolute">
         <axis xyz="0 0 1" />
-        <limit upper="0.85" effort="50.0" velocity="2.0" lower="0.0" />
+        <limit upper="0.65" effort="50.0" velocity="2.0" lower="0.0" />
         <parent link="xarm_gripper_base_link_respondable" />
         <child link="right_outer_knuckle_respondable" />
         <origin xyz="-0.059098 -0.035000 -0.000000" rpy="-0.000000 3.141593 -0.000000" />
@@ -1370,13 +1370,13 @@
             <mass value="0.033618" />
         </inertial>
         <collision name="right_outer_knuckle_respondable">
-            <origin xyz="-0.335780 0.654049 -0.081805" rpy="1.702355 3.140800 -0.008831" />
+            <origin xyz="-0.313780 0.664049 -0.081805" rpy="1.702355 3.140800 -0.008831" />
             <geometry>
                 <mesh filename="../meshes/linkhou_right_outer_knuckle_respondable_coll_1.dae" />
             </geometry>
         </collision>
         <visual name="right_outer_knuckle_visual">
-            <origin xyz="-0.335780 0.654049 -0.081805" rpy="1.702355 3.140800 -0.008831" />
+            <origin xyz="-0.313780 0.664049 -0.081805" rpy="1.702355 3.140800 -0.008831" />
             <geometry>
                 <mesh filename="../meshes/linkhou_right_outer_knuckle_visual_vis_1.dae" />
             </geometry>
@@ -1399,13 +1399,13 @@
             <mass value="0.048304" />
         </inertial>
         <collision name="right_finger_respondable">
-            <origin xyz="0.377819 0.689514 0.081805" rpy="-1.439237 3.142385 -3.132762" />
+            <origin xyz="0.355819 0.699514 0.081805" rpy="-1.439237 3.142385 -3.132762" />
             <geometry>
                 <mesh filename="../meshes/linkhou_right_finger_respondable_coll_1.dae" />
             </geometry>
         </collision>
         <visual name="right_finger_visual">
-            <origin xyz="0.377819 0.689514 0.081805" rpy="-1.439237 3.142385 -3.132762" />
+            <origin xyz="0.355819 0.699514 0.081805" rpy="-1.439237 3.142385 -3.132762" />
             <geometry>
                 <mesh filename="../meshes/linkhou_right_finger_visual_vis_1.dae" />
             </geometry>
@@ -1428,13 +1428,13 @@
             <mass value="0.023013" />
         </inertial>
         <collision name="right_inner_knuckle_respondable">
-            <origin xyz="-0.350780 0.639049 -0.081805" rpy="1.702355 3.140800 -0.008831" />
+            <origin xyz="-0.328780 0.649049 -0.081805" rpy="1.702355 3.140800 -0.008831" />
             <geometry>
                 <mesh filename="../meshes/linkhou_right_inner_knuckle_respondable_coll_1.dae" />
             </geometry>
         </collision>
         <visual name="right_inner_knuckle_visual">
-            <origin xyz="-0.350780 0.639049 -0.081805" rpy="1.702355 3.140800 -0.008831" />
+            <origin xyz="-0.328780 0.649049 -0.081805" rpy="1.702355 3.140800 -0.008831" />
             <geometry>
                 <mesh filename="../meshes/linkhou_right_inner_knuckle_visual_vis_1.dae" />
             </geometry>
@@ -1460,4 +1460,75 @@
             </material>
         </visual>
     </link>
+    <!-- <joint name="gripper_mount_joint" type="fixed">
+        <axis xyz="0 0 1" />
+        <parent link="LR4_R560_link7_respondable" />
+        <child link="gripper_base_link_respondable" />
+        <origin xyz="0.000000 0.000000 0.011000" rpy="0.261799 1.570796 0.000000" />
+    </joint>
+    <link name="gripper_base_link_respondable">
+        <collision name="gripper_base_link_respondable">
+            <origin xyz="-0.075000 0.000000 -0.000000" rpy="-0.000000 -1.570796 0.000000" />
+            <geometry>
+                <box size="0.025000 0.060000 0.150000" />
+            </geometry>
+        </collision>
+        <visual name="gripper_base_link_visual">
+            <origin xyz="-0.075000 0.000000 -0.000000" rpy="-0.000000 -1.570796 0.000000" />
+            <geometry>
+                <box size="0.025000 0.060000 0.150000" />
+            </geometry>
+            <material name="gripper_base_link_visual_material">
+                <color rgba="0.500000 0.500000 0.500000 1.0" />
+            </material>
+        </visual>
+    </link>
+    <joint name="left_finger_joint" type="prismatic">
+        <axis xyz="0 0 1" />
+        <limit upper="0.009" lower="0.0" effort="20.0" velocity="0.1" />
+        <parent link="gripper_base_link_respondable" />
+        <child link="left_finger_respondable" />
+        <origin xyz="-0.150000 0.027500 0.000000" rpy="-1.570796 -1.570796 0.000000" />
+    </joint>
+    <link name="left_finger_respondable">
+        <collision name="left_finger_respondable">
+            <origin xyz="0.000000 -0.015000 0.000000" rpy="-1.570796 3.141593 -3.141593" />
+            <geometry>
+                <box size="0.015000 0.005000 0.030000" />
+            </geometry>
+        </collision>
+        <visual name="left_finger_visual">
+            <origin xyz="0.000000 -0.015000 0.000000" rpy="-1.570796 3.141593 -3.141593" />
+            <geometry>
+                <box size="0.015000 0.005000 0.030000" />
+            </geometry>
+            <material name="left_finger_visual_material">
+                <color rgba="0.100000 0.300000 0.900000 1.0" />
+            </material>
+        </visual>
+    </link>
+    <joint name="right_finger_joint" type="prismatic">
+        <axis xyz="0 0 1" />
+        <limit upper="0.009" lower="0.0" effort="20.0" velocity="0.1" />
+        <parent link="gripper_base_link_respondable" />
+        <child link="right_finger_respondable" />
+        <origin xyz="-0.150000 -0.027500 0.000000" rpy="1.570796 -1.570796 0.000000" />
+    </joint>
+    <link name="right_finger_respondable">
+        <collision name="right_finger_respondable">
+            <origin xyz="0.000000 0.015000 -0.000000" rpy="1.570796 3.141593 3.141593" />
+            <geometry>
+                <box size="0.015000 0.005000 0.030000" />
+            </geometry>
+        </collision>
+        <visual name="right_finger_visual">
+            <origin xyz="0.000000 0.015000 -0.000000" rpy="1.570796 3.141593 3.141593" />
+            <geometry>
+                <box size="0.015000 0.005000 0.030000" />
+            </geometry>
+            <material name="right_finger_visual_material">
+                <color rgba="0.100000 0.300000 0.900000 1.0" />
+            </material>
+        </visual>
+    </link> -->
 </robot>

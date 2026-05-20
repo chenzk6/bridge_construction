@@ -1,5 +1,6 @@
 import numpy as np  
 import torch  
+import sys
 from utils.make_env_utils import make_env, get_env_kwargs  
 from vec_env.subproc_vec_env import SubprocVecEnv  
 from utils.wrapper import VecPyTorch  
@@ -7,10 +8,8 @@ from torch_algorithms import PPO_dev
 from torch_algorithms.policies import MultiDiscreteAttentionPolicy  
 from utils.evaluation import evaluate_fixed_scene  
 
-def custom_visualization():  
-
-
-    
+def custom_visualization(yaws_, initial_positions_, manual_block_lengths_, cliff0_center_, cliff1_center_):  
+# yaws  initial_positions   manual_block_lengths    cliff0_center   cliff1_center
     # 使用与训练命令完全相同的参数  
     env_kwargs = get_env_kwargs(  
         env_id="FetchBridgeBullet7Blocks-v1",  
@@ -92,46 +91,68 @@ def custom_visualization():
         for i in range(num_blocks)
     ]
 
-    yaws = [0.0, 0.0, 0.0, 1.57, 1.57, 1.57, 0.78]
+    # yaws = [0.0, 0.0, 0.0, 1.57, 1.57, 1.57, 0.78]
+    # yaws = [
+    #     0.031812,
+    #     -0.006694,
+    #     -0.01906,
+    #     -0.299208,
+    #     0.070743,
+    #     -0.001124,
+    #     -0.002034,
+    # ]
+    yaws = yaws_
     initial_orientations = [
     [0.0, 0.0, np.sin(y / 2.0), np.cos(y / 2.0)]
     for y in yaws
     ]
+
     # initial_positions = [
     #     [0.75, 0.10, 0.025],
     #     [0.85, 0.10, 0.025],
     #     [0.95, 0.10, 0.025],
     #     [0.75, 1.1, 0.025],
-    #     [0.85, 1.1, 0.025],
-    #     [0.95, 1.1, 0.025],
+    #     [0.85, 0.3, 0.025],
+    #     [0.95, 0.8, 0.025],
     #     [1.0, 0.6, 0.025],
     # ]
-    initial_positions = [
-        [0.75, 0.10, 0.025],
-        [0.85, 0.10, 0.025],
-        [0.95, 0.10, 0.025],
-        [0.75, 1.1, 0.025],
-        [0.85, 0.3, 0.025],
-        [0.95, 0.8, 0.025],
-        [1.0, 0.6, 0.025],
-    ]
-
+    # initial_positions = [
+    #     [0.6218, 0.9658, 0.025],
+    #     [0.961, 0.7721, 0.025],
+    #     [0.7035, 0.2042, 0.025],
+    #     [0.7342, 0.9703, 0.025],
+    #     [0.8649, 0.9702, 0.025],
+    #     [0.8588, 0.2013, 0.025],
+    #     [0.959, 0.48, 0.025],
+    # ]
+    initial_positions = initial_positions_
     # 手动输入积木长度  
-    # manual_block_lengths = [0.1, 0.08, 0.12, 0.09, 0.11, 0.07, 0.13]  
-    manual_block_lengths = [0.1, 0.1, 0.1, 0.0868, 0.0534, 0.1185, 0.1245]
-    # manual_block_lengths = [0.1, 0.1, 0.1, 0.1, 0.05, 0.12, 0.05]
+    # manual_block_lengths = [0.1, 0.1, 0.1, 0.06, 0.07, 0.1125, 0.1245]
+    manual_block_lengths = manual_block_lengths_
+
+    # 一半积木较小：[0.5*half_height, 0.9*half_height]
+    # 一半积木较大：[1.1*half_height, 1.25*half_height]
+
     object_sizes = [[0.025, length, 0.025] for length in manual_block_lengths]  
-    # cliff0_center = 0.278
-    # cliff1_center = 0.979
-    cliff0_center = 0.328
-    cliff1_center = 1.029
+
+    # cliff0_center = 0.3
+    # cliff1_center = 1.0
+    cliff0_center = cliff0_center_
+    cliff1_center = cliff1_center_
     
+    obs = eval_env.reset()
+    
+
     # 运行一次episode  
     evaluate_fixed_scene(  
         eval_env, initial_positions, object_sizes,   
         cliff0_center, cliff1_center, model.policy, torch.device("cpu"),
-        initial_orientations=initial_orientations
+        initial_orientations=initial_orientations, skip_reset=True, enable_replay=True
     )  
-
 if __name__ == "__main__":  
-    custom_visualization()
+    yaws = sys.argv[1]
+    initial_positions = sys.argv[2]
+    manual_block_lengths = sys.argv[3]
+    cliff0_center = sys.argv[4]
+    cliff1_center = sys.argv[5]
+    custom_visualization(yaws, initial_positions, manual_block_lengths, cliff0_center, cliff1_center)

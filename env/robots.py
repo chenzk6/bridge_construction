@@ -1099,7 +1099,7 @@ class LHRobot(ArmRobot):
         # init_gripper_axis = quat_rot_vec(topdown_quat, np.array([-1., 0., 0.]))
         self.base_orn = [0., 0., 1., 0.]  # 四元数表示绕Z轴180度旋转
         super(LHRobot, self).__init__(physics_client, "LingHouUrdf3.urdf", urdfrootpath, init_qpos,
-                                          [0.85, 0.6, 0.0], self.base_orn, init_end_effector_pos,
+                                          [0.8, 0.6, 0.0], self.base_orn, init_end_effector_pos,
                                           init_gripper_euler, end_effector_index, reset_finger_joints,
                                           useOrientation, useNullSpace, init_gripper_euler,
                                           np.array([-1., 0., 0.]), init_gripper_quat)
@@ -1124,8 +1124,8 @@ class LHRobot(ArmRobot):
         return np.array(end_effector_pos), np.array(end_effector_orn), np.array(end_effector_vl), np.array(gripper_pos), np.array(gripper_vel)  
 
     def gen_gripper_joint_command(self, ctrl):
-        """与 xArm 相同的夹爪控制逻辑"""
-        return 0.3 * ctrl * np.array(self.gripper_multipliers)
+        """与 xArm 相同的夹爪控制逻辑, 但减小了夹爪开合大小"""
+        return 0.18 * ctrl * np.array(self.gripper_multipliers)
 
     def run_ik(self, pos, orn):
         # 获取基座旋转矩阵

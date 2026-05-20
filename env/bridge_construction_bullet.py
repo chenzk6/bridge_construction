@@ -288,7 +288,7 @@ class BulletBridgeConstructionLow(RobotGymBaseEnv):
                                   [1.200000, 0.60000, -.625000],
                                   [0.000000, 0.000000, 0.707, 0.707])
         self.body_tables = [tableid]
-
+        print("pybullet_data_root:",pybullet_data.getDataPath())
         # Cliffs
         col_id = self.p.createCollisionShape(self.p.GEOM_BOX, halfExtents=[self._cliff_thickness, self._cliff_height, self._cliff_thickness])
         vis_id = self.p.createVisualShape(self.p.GEOM_BOX, halfExtents=[self._cliff_thickness, self._cliff_height, self._cliff_thickness])
@@ -453,7 +453,7 @@ class BulletBridgeConstructionLow(RobotGymBaseEnv):
             cliff_height = np.array([cliff_size[1]])
             object_i_type = np.array([0])
 
-            print(f"Cliff0 center: {cliff0_center}, Cliff1 center: {cliff1_center}")  
+            # print(f"Cliff0 center: {cliff0_center}, Cliff1 center: {cliff1_center}")  
 
             if _out_of_reach(object_i_pos, cliff0_center, cliff1_center, object_i_size, cliff_size,
                              cos_theta=abs(quat_rot_vec(np.array(object_i_quat), np.array([0., 1., 0.]))[1])):
@@ -511,6 +511,9 @@ class BulletBridgeConstructionHigh(gym.Env):
         self.noop = noop
         self.force_scale = force_scale
         self.cur_force_scale = 0
+
+        self.restart_from_buffer = False
+
         self.env = self._set_env_low(random_size, discrete, random_mode, block_thickness, cliff_thickness, cliff_height,
                                      render, need_visual, robot)
         self.env.reset()
@@ -800,7 +803,26 @@ class BulletBridgeConstructionHigh(gym.Env):
             x_pos = cliff_x_  # 确保在0.56米工作半径内
             z_scale = self.env._cliff_height if self.narrow_z else self.action_scale
             if self.action_2d:
+
+
+                _theta_div_pi = (self.rotation_range[1] - self.rotation_range[0]) / (2 * np.pi) * action[3] \
+                    + (self.rotation_range[0] + self.rotation_range[1]) / (2 * np.pi)
+                target_orn = np.array([0., 0., _theta_div_pi])
+                # 把欧拉(按你现有编码)转成四元数，用于判定是否竖直
+                alpha, beta, theta = target_orn * np.pi
+                target_quat = np.array([
+                    np.cos(alpha) * np.cos(beta) * np.sin(theta / 2),
+                    np.cos(alpha) * np.sin(beta) * np.sin(theta / 2),
+                    np.sin(alpha) * np.sin(theta / 2),
+                    np.cos(theta / 2)
+                ])
+                # 如果积木长轴接近 z 轴，压低 z
+                if abs(np.dot(quat_rot_vec(target_quat, np.array([0., 1., 0.])), np.array([0., 0., 1.]))) > 0.9:
+                    action[2] = min(action[2], -0.8)
+
+
                 target_pos = np.array([x_pos, y_pos + action[1] * self.action_scale, 2 * self.env._cliff_height + action[2] * z_scale])
+                print("self.env._cliff_height:", self.env._cliff_height," action[2]:",action[2]," z_scale:",z_scale)
                 _theta_div_pi = (self.rotation_range[1] - self.rotation_range[0]) / (2 * np.pi) * action[3] \
                                 + (self.rotation_range[0] + self.rotation_range[1]) / (2 * np.pi)
                 target_orn = np.concatenate([[0., 0.], [_theta_div_pi]])
