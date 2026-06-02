@@ -147,7 +147,7 @@ def custom_visualization(yaws_, initial_positions_, manual_block_lengths_, cliff
     evaluate_fixed_scene(  
         eval_env, initial_positions, object_sizes,   
         cliff0_center, cliff1_center, model.policy, torch.device("cpu"),
-        initial_orientations=initial_orientations, skip_reset=True, enable_replay=True
+        initial_orientations=initial_orientations, skip_reset=True, enable_replay=False
     )  
 if __name__ == "__main__":  
     yaws = sys.argv[1]

@@ -642,7 +642,7 @@ class Primitive(object):
         if isinstance(self.plan_robot, XArm7Robot):
             self.grasp_offset = -0.16
         else:
-            self.grasp_offset = -0.185  # -0.17  # from point to grasp to eef link
+            self.grasp_offset = -0.145  # -0.185  # from point to grasp to eef link
         self.verbose = verbose
         self.teleport_arm = teleport_arm
         self.force_scale = force_scale
