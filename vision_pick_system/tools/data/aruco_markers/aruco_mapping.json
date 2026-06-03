@@ -1,0 +1,51 @@
+{
+  "dictionary": "DICT_4X4_50",
+  "marker_size_mm": 40.0,
+  "items": [
+    {
+      "id": 1,
+      "length_mm": null,
+      "type": "wood_block"
+    },
+    {
+      "id": 2,
+      "length_mm": null,
+      "type": "wood_block"
+    },
+    {
+      "id": 3,
+      "length_mm": null,
+      "type": "wood_block"
+    },
+    {
+      "id": 4,
+      "length_mm": null,
+      "type": "wood_block"
+    },
+    {
+      "id": 5,
+      "length_mm": null,
+      "type": "wood_block"
+    },
+    {
+      "id": 6,
+      "length_mm": null,
+      "type": "wood_block"
+    },
+    {
+      "id": 7,
+      "length_mm": null,
+      "type": "wood_block"
+    },
+    {
+      "id": 8,
+      "length_mm": null,
+      "type": "wood_block"
+    },
+    {
+      "id": 9,
+      "length_mm": null,
+      "type": "wood_block"
+    }
+  ]
+}
